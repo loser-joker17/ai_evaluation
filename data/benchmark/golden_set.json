@@ -1,0 +1,101 @@
+[
+  {
+    "id": "weak_generic",
+    "question": "Discuss how social justice contributes to inclusive development in India.",
+    "answer": "Social justice aims to reduce inequalities and provide equal opportunities. Government initiatives in education, healthcare and employment can help disadvantaged groups. However, social discrimination and unequal access to resources continue to create barriers. Inclusive development requires effective implementation of welfare policies, accountability and participation of marginalized communities.",
+    "subject": "GS Paper II",
+    "max_marks": 10,
+    "word_limit": 150,
+    "human_marks": 3.5,
+    "marks_source": "placeholder",
+    "notes": "weak, generic, no specifics, no conclusion"
+  },
+  {
+    "id": "strong_pil",
+    "question": "Critically examine the role of Public Interest Litigation in strengthening access to justice in India.",
+    "answer": "Public Interest Litigation (PIL) emerged when courts relaxed the rule of locus standi in cases like Hussainara Khatoon (1979) and S.P. Gupta (1981), opening the judiciary to the poor and marginalised.\n\nContributions: Articles 32 and 226 allow courts to be approached through simple letters, which lowers the cost barrier. Courts expanded Article 21 to include speedy trial (Hussainara Khatoon) and the right to food (PUCL case). The Vishaka guidelines (1997) filled a legislative vacuum on workplace sexual harassment.\n\nLimitations: PIL is sometimes misused as 'publicity interest litigation', adding to case backlog. Continuing mandamus can blur the separation of powers, and compliance monitoring is weak.\n\nWay forward: courts should screen petitions for bona fides and impose costs on frivolous ones, following the guidelines in State of Uttaranchal v. Balwant Singh Chaufal (2010).\n\nThus, PIL remains a vital tool for access to justice, but its credibility depends on disciplined use.",
+    "subject": "GS Paper II",
+    "max_marks": 10,
+    "word_limit": 150,
+    "human_marks": 7.0,
+    "marks_source": "placeholder",
+    "notes": "strong, named cases, balanced, has intro and conclusion"
+  },
+  {
+    "id": "average_women",
+    "question": "Discuss the challenges faced by women in achieving political representation in India and suggest measures to address them.",
+    "answer": "Women's political representation in India remains low despite constitutional equality. The 73rd Amendment reserved one-third of seats for women in Panchayati Raj institutions, which brought many women into local politics. The Women's Reservation Act, 2023 extends one-third reservation to Parliament and state assemblies, but it will apply only after delimitation.\n\nChallenges include patriarchal social norms, lack of party tickets, financial constraints and the problem of 'sarpanch pati', where male relatives control the elected woman's decisions. Violence and harassment during campaigns also discourage participation.\n\nMeasures: political parties should give more tickets to women, and training and awareness programmes can build the capacity of women representatives.",
+    "subject": "GS Paper I",
+    "max_marks": 10,
+    "word_limit": 150,
+    "human_marks": 5.0,
+    "marks_source": "placeholder",
+    "notes": "average, specifics present, no conclusion, little explanation of how"
+  },
+  {
+    "id": "off_topic",
+    "question": "Critically examine the role of Public Interest Litigation in strengthening access to justice in India.",
+    "answer": "The monsoon is crucial for Indian agriculture. Kharif crops such as rice and cotton depend on the southwest monsoon. A delayed monsoon reduces sowing and affects farm incomes, while good rainfall improves reservoir levels and rural demand.",
+    "subject": "GS Paper II",
+    "max_marks": 10,
+    "word_limit": 150,
+    "human_marks": 0.0,
+    "marks_source": "placeholder",
+    "notes": "completely off topic"
+  },
+  {
+    "id": "constitutional_morality",
+    "question": "\"Constitutional morality acts as both a restraint and an enabler in a democratic society.\" Critically examine this statement in the context of recent judicial interpretations in India.",
+    "answer": "Constitutional morality refers to adherence to values of equality, liberty, justice, fraternity and more as enshrined in the Indian Constitution.\n\nAs a Restraint:\n- Limits power of state and the rule of majoritarianism in a democracy, that may undermine rights of individuals and especially minorities.\n- Navtej Singh Johar Case - SC decriminalized homosexuality, emphasizing that popular morality cannot override constitutional morality.\n- Sabarimala Case - Court put an end to discriminatory practices against women with respect to temple entry.\n\nAs an Enabler:\n- It empowers vulnerable sections and individuals to ensure opportunity for development, dignity and justice.\n- Joseph Shine Case - Adultery was decriminalized (equality, justice and dignity).\n- Shayara Bano Case - Triple Talaq (Talaq-e-Biddat) was declared unconstitutional (constitutional morality over religious freedom), as discriminatory.\n\nIn a heterogeneous society like India, constitutional morality acts as both a safeguard and a guiding light to better our society and legislations in line with modern humanistic, developmental and equitable principles.",
+    "subject": "GS Paper II",
+    "max_marks": 10,
+    "word_limit": 150,
+    "human_marks": 6.0,
+    "marks_source": "llm_consensus",
+    "notes": "real aspirant answer; mean of 3 LLM evaluators (4.5, 6.5, 7.5); no critical counter-view"
+  },
+  {
+    "id": "simultaneous_elections",
+    "question": "Discuss the relevance and challenges of holding simultaneous elections in India. Would it strengthen federalism or undermine it?",
+    "answer": "Simultaneous elections, also called as One Nation One Election, seek to synchronise Lok Sabha and State Assembly elections to reduce financial costs, policy lags due to frequent MCC imposition and administrative disruption.\n\nRelevance:\n- Reduced cost.\n- Reduced policy lag.\n- Curbing populist schemes.\n- Improved governance.\n- More focus on development and less on elections.\n- Policy continuity.\n\nChallenges:\n- Many constitutional amendments, like Articles 83, 172 and 356.\n- States are not happy with the idea.\n- Local body elections are left out.\n- Changes required in the RPA Act, 1951.\n\nSimultaneous Elections and Federalism:\n\nStrengthen:\n- Enhance political stability.\n- State issues to be reflected in central elections also.\n- Cooperative federalism can be enhanced as more time and energy can be given to developmental work.\n\nUndermine:\n- National parties may override state parties with narratives.\n- State issues may be undermined due to national agendas influencing voter behaviour.\n- Reduced duration of State Assembly in case of dissolution.\n\nAlthough a great vision, implementation efforts of ONOE must satisfy all federal stakeholders through consultation, deliberations and participation for national interest and not political benefit.",
+    "subject": "GS Paper II",
+    "max_marks": 10,
+    "word_limit": 150,
+    "human_marks": 6.5,
+    "marks_source": "llm_consensus",
+    "notes": "real aspirant answer; mean of 3 LLM evaluators (6.5, 6.0, 7.0); about 187 words, over limit"
+  },
+  {
+    "id": "tribunals",
+    "question": "The role of tribunals in India has expanded but concerns about their independence and effectiveness persist. Critically evaluate the current tribunal system in light of recent judicial and legislative developments.",
+    "answer": "Tribunals are quasi-judicial institutions added as the provisions of Articles 323A and 323B by the 42nd Constitutional Amendment Act, 1976, for fields like taxation, administration, environment and more.\n\nRole of tribunals have expanded with LPG reforms and neoliberal policies, specified nature of the cases it undertakes (e.g. Green Tribunal for environmental cases) and easing judiciary load.\n\nThe Tribunal Reforms Act, 2021 raised greater concerns to tribunals.\n\nTribunals are not bound by procedures of BNS and BNSS, making them unfairly inclined towards [unclear].\n\nChallenges to Independence and Efficiency:\n- Abolition and merger of various tribunals has led to reduced specificity and case overload.\n- L. Chandra Kumar Case - SC mentioned appeal to High Court available, reducing the purpose of tribunals as it cannot function as a binding verdict.\n- Unfulfilled vacancies, infrastructure lags, technical nature of cases and unsuitable appointees further reduced efficiency.\n\nTherefore, there is a need to check and oversee effectiveness of tribunals, using modern technology like e-Tribunals and AI.",
+    "subject": "GS Paper II",
+    "max_marks": 10,
+    "word_limit": 150,
+    "human_marks": 4.0,
+    "marks_source": "llm_consensus",
+    "notes": "real aspirant answer; mean of 3 LLM evaluators (4.0, 4.5, 4.0); factual errors on L. Chandra Kumar and BNS/BNSS; no conclusion"
+  },
+  {
+    "id": "anti_defection",
+    "question": "In light of increasing defections and political instability, do you think the Tenth Schedule of the Constitution needs a relook? Suggest reforms for strengthening anti-defection law.",
+    "answer": "10th Schedule, inserted by 52nd Constitutional Amendment, seeks to curb political defection and horse trading (corrupt practices) in legislators (Parliament and State Assemblies).\n\nRelevance and Achievements:\n- Increased political stability and accountability.\n- Increased relevance of party whips.\n- Reduced corruption.\n- Reduction in individual defections.\n\nBut recent events in Maharashtra State Assembly have highlighted the need to relook the 10th Schedule and issues with it.\n\nChallenges with ADL:\n- Reduced individual standing against party standing.\n- Bulk defections are allowed (2/3rd members), leading to reduced political stability as seen in Maharashtra recently.\n- Non-application to local bodies.\n- Speaker/Chairman, to act as the final authority, can be partisan.\n\nSuggested Reforms:\n- Powers may be shared between Speaker and Election Commission for more impartiality.\n- Merger parameter to be made more holistic.\n- Time-bound decision making by the Speaker.\n- Written statements of reasons and rationale behind verdict.\n- Enhancing intra-party democracy by forming an Anti-Defection Committee instead of only whips.",
+    "subject": "GS Paper II",
+    "max_marks": 10,
+    "word_limit": 150,
+    "human_marks": 6.5,
+    "marks_source": "llm_consensus",
+    "notes": "real aspirant answer; mean of 3 LLM evaluators (7.0, 5.5, 7.0); 2/3rd claim ignores 91st Amendment; no conclusion"
+  },
+  {
+    "id": "sevottam_model",
+    "question": "\"The success of good governance lies in citizen-centric administration.\" Examine the significance of the Sevottam model in this context.",
+    "answer": "Good governance in a democracy requires administration to be ethical, efficient, responsive and considerate to the needs and grievances of citizens.\n\nEthical, efficient and citizen-centric administration leads to good governance.\n\nSevottam Model was developed by the Department of Administrative Reforms and Public Grievances, ensuring a citizen-centric framework for ethical service delivery.\n\nMeans and Significance of Sevottam:\n- Citizen Charter.\n- Grievance Redressal Mechanism.\n- Service Delivery/Efficiency.\n- Accountability and transparency.\n- Citizen empowerment.\n\nSevottam requires internal shift in working model, attitude towards services and working culture towards citizens.\n\nChallenges:\n- No legal mandate, uniformity and clarity towards Citizen Charter.\n- High pending cases of grievance redressal.\n- Low digital literacy in both appointees and citizens.\n- Lack of awareness.\n- Weak monitoring and implementation.\n\nWay Forward:\n- Legal mandate, clear rules and guidelines.\n- One-stop helpline number for all government departments.\n- Sevottam officers to be appointed to integrate functions of Information Officer, CVC and Lokayukta.\n\nAlthough a great vision, Sevottam requires structural changes to make services more accessible to the public.",
+    "subject": "GS Paper II",
+    "max_marks": 10,
+    "word_limit": 150,
+    "human_marks": 6.0,
+    "marks_source": "llm_consensus",
+    "notes": "real aspirant answer; mean of 3 LLM evaluators (5.5, 6.0, 6.5); lists components, merges Information Officer/CVC/Lokayukta suggestion"
+  }
+]

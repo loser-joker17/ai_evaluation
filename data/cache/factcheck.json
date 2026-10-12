@@ -1,0 +1,82 @@
+{
+  "46fd59270af3e24d052db23495aca276b4d41ce7": {
+    "claim": "Tribunals are quasi-judicial institutions added as the provisions of Articles 323A and 323B by the 42nd Constitutional Amendment Act, 1976",
+    "query": "Articles 323A 323B 42nd Constitutional Amendment Act 1976 tribunals",
+    "label": "supported",
+    "quote": "In India, the Constitution (42nd Amendment) Act, 1976 paved way for tribunalisation of the justice dispensation system by introduction of Articles 323A and 323B in the Constitution.",
+    "explanation": "The Supreme Court judgment confirms that the 42nd Amendment Act, 1976 introduced Articles 323A and 323B, which provide for tribunals as quasi-judicial institutions.",
+    "sources": [
+      "https://api.sci.gov.in/pdfdate/index1.php?filename=supremecourt%2F2017%2F9680%2F9680_2017_1_1501_18247_Judgement_13-Nov-2019.pdf&dno=96802017&dt=2019-11-13",
+      "https://prsindia.org/billtrack/prs-products/the-tribunal-system-in-india",
+      "https://api.sci.gov.in/jonew/judis/41962.pdf",
+      "https://api.sci.gov.in/jonew/judis/26423.pdf"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "c5b92db0cc624ba3e3942296a24858ad12eac3fa": {
+    "claim": "The Tribunal Reforms Act, 2021 raised greater concerns to tribunals",
+    "query": "Tribunal Reforms Act 2021 provisions concerns",
+    "label": "supported",
+    "quote": "The 2021 Act does not conform to the judgement of the Supreme Court. This raises certain issues with regards to the fair administration and functioning of tribunals:",
+    "explanation": "Source [5] explicitly states that the 2021 Act's non-compliance with Supreme Court judgements raises issues regarding the fair administration and functioning of tribunals, directly supporting the claim that it raised concerns.",
+    "sources": [
+      "https://prsindia.org/theprsblog/the-tribunals-reforms-bill-2021-in-the-context-of-the-recent-supreme-court-judgement?page=2&per-page=1",
+      "https://prsindia.org/billtrack/the-tribunals-reforms-bill-2026",
+      "https://prsindia.org/articles-by-prs-team/understanding-tribunal-reforms-and-challenges",
+      "https://prsindia.org/files/bills_acts/bills_parliament/2021/The%20Tribunals%20Reforms%20Bill%202021.pdf"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "a04fea418dff287dc773d2336b8709a8c071356f": {
+    "claim": "Tribunals are not bound by procedures of BNS and BNSS",
+    "query": "Tribunals bound by procedures BNS BNSS applicability",
+    "label": "unverifiable",
+    "quote": null,
+    "explanation": "None of the provided sources directly address whether tribunals are bound by the procedures of the Bharatiya Nyaya Sanhita (BNS) or the Bharatiya Nagarik Suraksha Sanhita (BNSS).",
+    "sources": [
+      "https://prsindia.org/billtrack/the-bharatiya-nagarik-suraksha-sanhita-2023",
+      "https://api.sci.gov.in/supremecourt/2025/44721/44721_2025_8_1503_73393_Judgement_17-Aug-2026.pdf",
+      "https://www.pib.gov.in/Pressreleaseshare.aspx?PRID=2082757&reg=3&lang=2",
+      "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2152496"
+    ],
+    "notes_used": 0,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "eba77918d7479d17c06563ba18371e19abe7d5d9": {
+    "claim": "L. Chandra Kumar Case - SC mentioned appeal to High Court available, reducing the purpose of tribunals as it cannot function as a binding verdict",
+    "query": "L Chandra Kumar case appeal High Court tribunal binding verdict",
+    "label": "unverifiable",
+    "quote": null,
+    "explanation": "The sources confirm that L. Chandra Kumar (1997) restored High Court jurisdiction over tribunal appeals, but they do not state that this reduced the purpose of tribunals or prevented them from functioning as binding verdicts; rather, Source [0] notes tribunal decisions are 'Binding unless challenged in High Court/Supreme Court' and that the case upheld 'Judicial Independence: Rulings prevail over departmental decisions'.",
+    "sources": [
+      "https://www.sci.gov.in",
+      "https://newindiasamachar.pib.gov.in",
+      "https://rti.sci.gov.in",
+      "https://prsindia.org"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "0aa04eaf13f159f94593486e01aeaa4b77d61c14": {
+    "claim": "specified nature of the cases it undertakes (e.g. Green Tribunal for environmental cases)",
+    "query": "National Green Tribunal environmental cases jurisdiction",
+    "label": "supported",
+    "quote": "Since inception National Green Tribunal has been taking up cases relating to environment such as Air pollution, Noise pollution, Water pollution, Industrial pollution, waste disposal etc.",
+    "explanation": "The official PIB release confirms that the National Green Tribunal handles cases of a specified nature, namely environmental matters including various types of pollution and waste disposal.",
+    "sources": [
+      "https://www.pib.gov.in/PressReleaseIframePage.aspx?PRID=1937745",
+      "https://prsindia.org/billtrack/the-national-green-tribunal-bill-2009",
+      "https://prsindia.org/theprsblog/national-green-tribunal-on-appeal-of-forest-clearances?page=353&per-page=1",
+      "https://prsindia.org/theprsblog/legislative-debate-influencing-amendments-to-the-green-tribunal-bill-2010?page=379&per-page=1"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  }
+}

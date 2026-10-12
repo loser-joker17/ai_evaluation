@@ -1,0 +1,29 @@
+[
+  {
+    "query": "Madras Bar Association tribunal minimum age 50 four-year tenure",
+    "expected": [{"file": "Indian Polity and Constitution", "pages": [83]}]
+  },
+  {
+    "query": "L. Chandra Kumar tribunals High Court judicial review",
+    "expected": [{"file": "Indian Polity and Constitution", "pages": [85]}]
+  },
+  {
+    "query": "Sevottam model Citizen Charter grievance service delivery",
+    "expected": [{"file": "Governance", "pages": [73, 74]}]
+  },
+  {
+    "query": "42nd Constitutional Amendment Act 1976 Articles 323A 323B tribunals",
+    "expected": [
+      {"file": "complete_Polity", "pages": [125]},
+      {"file": "Indian Polity and Constitution", "pages": [83]}
+    ]
+  },
+  {
+    "query": "Tribunals not bound by procedures BNS BNSS",
+    "expected": []
+  },
+  {
+    "query": "China wants bipolar world unipolar Asia multipolar South",
+    "expected": []
+  }
+]

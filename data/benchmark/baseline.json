@@ -1,0 +1,35 @@
+{
+  "summary": {
+    "n": 1,
+    "mae_10pt": 1.5,
+    "bias_10pt": -1.5,
+    "within_0.5": 0.0,
+    "within_1.0": 0.0,
+    "spearman": null,
+    "mean_run_std": 0.0,
+    "reviewer_mean_spread_10pt": 1.0
+  },
+  "cases": [
+    {
+      "id": "weak_generic",
+      "max_marks": 10,
+      "human": 5.0,
+      "human_spread": 1.0,
+      "ai_mean": 3.5,
+      "ai_runs": [
+        3.5,
+        3.5,
+        3.5
+      ],
+      "ai_std": 0.0,
+      "levels": {
+        "relevance": 3,
+        "content_substantiation": 2,
+        "analysis_depth": 2,
+        "coverage_balance": 3,
+        "structure_presentation": 3
+      },
+      "feedback_consistent": true
+    }
+  ]
+}

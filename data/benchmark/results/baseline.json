@@ -1,0 +1,122 @@
+{
+  "summary": {
+    "n": 4,
+    "mae_10pt": 0.5,
+    "bias_10pt": 0.5,
+    "within_0.5": 0.75,
+    "within_1.0": 1.0,
+    "spearman": 1.0,
+    "mean_raw_run_std_10pt": 0.15,
+    "reviewer_mean_spread_10pt": null
+  },
+  "cases": [
+    {
+      "id": "weak_generic",
+      "max_marks": 10,
+      "marks_source": "placeholder",
+      "human": 3.5,
+      "human_spread": null,
+      "ai_mean": 4.0,
+      "ai_final_runs": [
+        4.0,
+        4.0,
+        4.0
+      ],
+      "ai_raw_runs": [
+        4.4,
+        3.9,
+        4.4
+      ],
+      "ai_raw_std": 0.24,
+      "levels": {
+        "relevance": 4,
+        "content_substantiation": 2,
+        "analysis_depth": 3,
+        "coverage_balance": 3,
+        "structure_presentation": 3
+      },
+      "feedback_consistent": true
+    },
+    {
+      "id": "strong_pil",
+      "max_marks": 10,
+      "marks_source": "placeholder",
+      "human": 7.0,
+      "human_spread": null,
+      "ai_mean": 7.5,
+      "ai_final_runs": [
+        7.5,
+        7.5,
+        7.5
+      ],
+      "ai_raw_runs": [
+        7.51,
+        7.5,
+        7.5
+      ],
+      "ai_raw_std": 0.0,
+      "levels": {
+        "relevance": 5,
+        "content_substantiation": 5,
+        "analysis_depth": 5,
+        "coverage_balance": 5,
+        "structure_presentation": 5
+      },
+      "feedback_consistent": true
+    },
+    {
+      "id": "average_women",
+      "max_marks": 10,
+      "marks_source": "placeholder",
+      "human": 5.0,
+      "human_spread": null,
+      "ai_mean": 6.0,
+      "ai_final_runs": [
+        6.0,
+        6.5,
+        5.5
+      ],
+      "ai_raw_runs": [
+        6.2,
+        6.6,
+        5.7
+      ],
+      "ai_raw_std": 0.37,
+      "levels": {
+        "relevance": 4,
+        "content_substantiation": 4,
+        "analysis_depth": 3,
+        "coverage_balance": 4,
+        "structure_presentation": 3
+      },
+      "feedback_consistent": true
+    },
+    {
+      "id": "off_topic",
+      "max_marks": 10,
+      "marks_source": "placeholder",
+      "human": 0.0,
+      "human_spread": null,
+      "ai_mean": 0.0,
+      "ai_final_runs": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "ai_raw_runs": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "ai_raw_std": 0.0,
+      "levels": {
+        "relevance": 0,
+        "content_substantiation": 0,
+        "analysis_depth": 0,
+        "coverage_balance": 0,
+        "structure_presentation": 0
+      },
+      "feedback_consistent": true
+    }
+  ]
+}

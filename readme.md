@@ -226,5 +226,3 @@ scripts/                      Benchmarking and debugging scripts
 tests/                        Unit tests
 benchmark_examiner.py         Benchmark against examiner-marked answers
 ```
-
----

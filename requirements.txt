@@ -1,0 +1,12 @@
+# Core pipeline
+langgraph>=1.2
+langchain-openai>=1.7
+pydantic>=2.13
+python-dotenv>=1.2
+
+# Fact-check web search and PDF reading for the notes corpus
+tavily-python>=0.8
+pypdf>=5.9
+
+# Tests
+pytest>=9.1

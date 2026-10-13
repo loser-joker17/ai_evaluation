@@ -42,5 +42,49 @@
         "audit_note": null
       }
     ]
+  },
+  "forumias_gs2_q2": {
+    "status": "success",
+    "errors": [],
+    "seconds": 321.1,
+    "raw_total": 3.2,
+    "final_total": 3.0,
+    "dims": [
+      {
+        "dimension": "relevance",
+        "raw_level": 3,
+        "final_level": 3,
+        "cap_note": null,
+        "audit_note": null
+      },
+      {
+        "dimension": "content_substantiation",
+        "raw_level": 2,
+        "final_level": 2,
+        "cap_note": "1 possible factual error(s), unverified: \"CANADA [crossed out and replaced by examiner with CHINA]\".",
+        "audit_note": null
+      },
+      {
+        "dimension": "analysis_depth",
+        "raw_level": 2,
+        "final_level": 2,
+        "cap_note": "Few causal explanations (how or why) are given; most points are assertions.",
+        "audit_note": null
+      },
+      {
+        "dimension": "coverage_balance",
+        "raw_level": 3,
+        "final_level": 3,
+        "cap_note": "Answer exceeds the word limit (282 of 150 words), so its coverage was not achieved within the allowed length.",
+        "audit_note": null
+      },
+      {
+        "dimension": "structure_presentation",
+        "raw_level": 2,
+        "final_level": 2,
+        "cap_note": "Answer exceeds the 150-word limit.",
+        "audit_note": null
+      }
+    ]
   }
 }

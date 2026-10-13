@@ -158,5 +158,117 @@
     "notes_used": 2,
     "found_sources": true,
     "note_disagrees": false
+  },
+  "7b5d30f2557c448f1d07b35ac9b3c397c88d567b": {
+    "claim": "K.C. Wheare has described Indian federalism as 'quasi-federal' with strong Centre.",
+    "query": "K.C. Wheare quasi-federal India strong Centre",
+    "label": "supported",
+    "quote": "Wheare called the Indian Federation as 'quasi-federal' which established a unitary State, with subsidiary federal features, rather than a federal State with subsidiary unitary features",
+    "explanation": "Source [4] directly quotes K.C. Wheare describing the Indian Federation as 'quasi-federal' and characterizing it as a unitary State with subsidiary federal features, which aligns with the claim's description of 'quasi-federal with strong Centre'.",
+    "sources": [
+      "https://www.darpg.gov.in/static/uploads/2025/10/c5812e2fe9b81f41b2351c50283c0c97.pdf",
+      "https://cms.rajyasabha.nic.in/UploadedFiles/ElectronicPublications/Ambedkar.pdf",
+      "https://api.sci.gov.in/pdf/aorexam/leading_cases/8.pdf",
+      "https://api.sci.gov.in/jonew/judis/2449.pdf"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "e452cf5e95c883d37f41794eb97770dc065f6493": {
+    "claim": "Hence India is called an 'indestructible Union of destructible states'.",
+    "query": "indestructible Union of destructible states India",
+    "label": "supported",
+    "quote": "India is an indestructible Union of destructible States.",
+    "explanation": "Source [0] explicitly states the exact phrase used in the claim.",
+    "sources": [
+      "https://www.sci.gov.in/constitution",
+      "https://www.sci.gov.in/document/l-chandra-kumar-v-union-of-india-and-ors-1994-supp-6-scr-261",
+      "https://cms.rajyasabha.nic.in/documents/CouncilOfState/1657796269327.93_Council%20of%20States(2)%20(1).pdf",
+      "https://www.sci.gov.in/document/list-of-the-nodal-officers-standing-counsels-appointed-by-the-union-of-india-different-states-and-union-territories-for-receiving-advance-copy-of-bail-petitions-as-on-06-08-2026"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "04b21a282292a72ec8d8c90b11c448a0ad7a8e7a": {
+    "claim": "according to political thinkers like KC Wheare federalism could be of different types.",
+    "query": "KC Wheare types of federalism",
+    "label": "unverifiable",
+    "quote": null,
+    "explanation": "The sources only mention K.C. Wheare's classification of India as 'quasi-federal' or 'semi-federal' but do not address his general theory on types of federalism.",
+    "sources": [
+      "https://www.pib.gov.in/newsite/erelcontent.aspx?relid=73161",
+      "https://www.pib.gov.in/newsite/PrintRelease.aspx?relid=73161",
+      "https://www.pib.gov.in/newsite/PrintRelease.aspx?relid=189589",
+      "https://www.pib.gov.in/PressReleaseIframePage.aspx?PRID=1953380"
+    ],
+    "notes_used": 2,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "8523123f60a4a0d72369b5c7a62ef7852b803d77": {
+    "claim": "Coming together model - Indestructible union of indestructible states. USA, CANADA [one of these crossed out - unclear]",
+    "query": "coming together federalism indestructible union states USA Canada",
+    "label": "unverifiable",
+    "quote": null,
+    "explanation": "The sources confirm the USA is an 'indestructible union of indestructible states' but do not address Canada or the specific term 'Coming together model', and the claim ambiguously crosses out one country.",
+    "sources": [
+      "https://api.sci.gov.in/jonew/judis/44300.pdf",
+      "https://www.darpg.gov.in/static/uploads/2025/10/c5812e2fe9b81f41b2351c50283c0c97.pdf",
+      "https://cms.rajyasabha.nic.in/UploadedFiles/ElectronicPublications/Ambedkar.pdf",
+      "https://api.sci.gov.in/pdf/aorexam/leading_cases/8.pdf"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "f7b21e4fca65ef3d4fec6b00e15e71170270988d": {
+    "claim": "Holding together model - India, USSR (Post 1991), CANADA [crossed out and replaced by examiner with CHINA - unclear]",
+    "query": "holding together federalism India USSR Canada China",
+    "label": "unverifiable",
+    "quote": null,
+    "explanation": "The sources discuss India's federalism and mention Canada briefly, but do not address the 'holding together model' classification, the USSR (Post 1991), or China, making the full claim unverifiable.",
+    "sources": [
+      "https://api.sci.gov.in/supremecourt/2012/35071/35071_2012_Judgement_26-Sep-2018.pdf",
+      "https://api.sci.gov.in/pdf/AnnualReports/The%20Constitution%20at%2067.pdf",
+      "https://cms.rajyasabha.nic.in/UploadedFiles/Debates/OfficialDebatesDatewise/Floor/266/16122024/16122024.pdf",
+      "https://www.darpg.gov.in/static/uploads/2025/10/c5812e2fe9b81f41b2351c50283c0c97.pdf"
+    ],
+    "notes_used": 0,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "21faf667c5c0041c55e1fc9220eee2c27a98d47f": {
+    "claim": "Urban Local Bodies (ULB) are constitutionally guaranteed by the 74th C.A.A, with the XII schedule getting introduced in the Constitution.",
+    "query": "74th Constitutional Amendment Act XII Schedule Urban Local Bodies",
+    "label": "supported",
+    "quote": "Constitutional Basis 74th Constitutional Amendment Act, 1992 Inserted Part IX-A into the Constitution Articles 243P to 243ZG 12th Schedule – 18 subjects",
+    "explanation": "Source [1] explicitly states that the 74th Constitutional Amendment Act, 1992 inserted Part IX-A and the 12th Schedule into the Constitution, providing the constitutional basis for Urban Local Bodies.",
+    "sources": [
+      "https://www.legislative.gov.in/static/uploads/2025/07/8e3828fa91baa94f3aaa74cdc4152cf2.pdf",
+      "https://www.legislative.gov.in/static/uploads/2025/07/c9fe9c9b6840524844316f74bb1c556c.pdf",
+      "https://prsindia.org/bills/states/the-greater-bengaluru-governance-bill-2024",
+      "https://www.pib.gov.in/PressNoteDetails.aspx?id=157709&NoteId=157709&ModuleId=3"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "680365426d72b6d34cf638e3eab787c41d1bd213": {
+    "claim": "Post GST Law, 2016.",
+    "query": "GST Law 2016 impact Urban Local Bodies taxation",
+    "label": "unverifiable",
+    "quote": null,
+    "explanation": "The claim 'Post GST Law, 2016' is an incomplete fragment that does not express a specific verifiable proposition; sources mention the 101st Amendment Act was passed in 2016 but the claim's meaning is unclear.",
+    "sources": [
+      "https://prsindia.org/budgets/primers/state-of-state-finances-2021-22",
+      "https://prsindia.org/policy/analytical-reports/state-of-state-finances-2022-23",
+      "https://www.pib.gov.in/PressNoteDetails.aspx?NoteId=155151&ModuleId=3",
+      "https://prsindia.org/policy/report-summaries/report-of-the-16th-finance-commission-for-2026-31"
+    ],
+    "notes_used": 2,
+    "found_sources": true,
+    "note_disagrees": false
   }
 }

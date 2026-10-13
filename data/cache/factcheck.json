@@ -78,5 +78,85 @@
     "notes_used": 3,
     "found_sources": true,
     "note_disagrees": false
+  },
+  "fcc10a9002b84e86c5b5d0932989aa577bc5b9a7": {
+    "claim": "According to Art 326 of the Constitution it is a right of every citizen to get registered as an elector in the Rolls.",
+    "query": "Article 326 Constitution right to be registered elector",
+    "label": "unverifiable",
+    "quote": null,
+    "explanation": "The judge's quote was not found in the retrieved text.",
+    "sources": [
+      "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2139342",
+      "https://api.sci.gov.in/jonew/judis/40561.pdf",
+      "https://api.sci.gov.in/jonew/judis/17187.pdf",
+      "https://www.sci.gov.in/landmark-judgment-summaries"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "dfb9aa015c052ad129add4c36d8e2f2990271142": {
+    "claim": "laws like ROP Act 1950 and ROP Act 1951 ensure that officials and institutions would be present for the citizens to get empowered their right to vote.",
+    "query": "Representation of People Act 1950 1951 voting rights",
+    "label": "unverifiable",
+    "quote": null,
+    "explanation": "The sources describe the Acts establishing the Election Commission, electoral registration officers, and the statutory right to vote for enrolled citizens, but do not explicitly state that the laws 'ensure that officials and institutions would be present for the citizens to get empowered their right to vote' in those terms, making the claim partly right but imprecise.",
+    "sources": [
+      "https://www.indiacode.nic.in/bitstream/123456789/2096/9/A1951-43.pdf",
+      "https://prsindia.org/files/bills_acts/bills_parliament/2008/bill200_20081202200_The_Representation_of_the_People_Act_1951.pdf",
+      "https://www.indiacode.nic.in/bitstream/123456789/1941/1/195143.pdf",
+      "https://www.indiacode.nic.in/bitstream/123456789/2096/1/aA1951-43.pdf"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "cf9ba80023b296bb0c2f7bf0b72d5809f2a520c3": {
+    "claim": "ROP, 1951 (Section 8) ensures that everyone in the nation has right to contest elections, if they are fit to represent their constituency.",
+    "query": "Section 8 Representation of People Act 1951 right to contest elections",
+    "label": "contradicted",
+    "quote": "It may be recalled that this Section disqualifies a person from contesting election and for being a member of the Legislature if he is convicted for certain specified offences.",
+    "explanation": "Sources [3] and [4] explicitly state that Section 8 of the Representation of the People Act, 1951 prescribes disqualifications for conviction of certain offences, rather than ensuring a universal right to contest elections.",
+    "sources": [
+      "https://api.sci.gov.in/jonew/judis/9923.pdf",
+      "https://api.sci.gov.in/supremecourt/2016/12704/12704_2016_Judgement_26-Sep-2018.pdf",
+      "https://archive.pib.gov.in/archive/releases98/lyr2002/rsep2002/06092002/r060920027.html",
+      "https://www.eci.gov.in/eci/public/api/document?id=17432"
+    ],
+    "notes_used": 2,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "aaa56f9dc6b1081ae4e3b3c9c1755c171a6880a5": {
+    "claim": "For Lok Sabha anyone from the nation (citizen of India, 25 years age) can contest from their respective, while for R-S the rules are similar just the age is 35 years.",
+    "query": "Lok Sabha Rajya Sabha minimum age 25 35 contest elections",
+    "label": "contradicted",
+    "quote": "A person is qualified for the membership of the Rajya Sabha if She/he is a citizen of India, not less than 30 years of age (Article 84 of the Constitution of India)",
+    "explanation": "The claim states the Rajya Sabha age requirement is 35 years, but official sources [3] and [4] specify the minimum age is 30 years.",
+    "sources": [
+      "https://cms.rajyasabha.nic.in/UploadedFiles/Procedure/RajyaSabhaAtWork/English/30-85/CHAPTER3.pdf",
+      "https://www.eci.gov.in/eci-backend/public/api/download?url=LMAhAK6sOPBp%2FNFF0iRfXbEB1EVSLT41NNLRjYNJJP1KivrUxbfqkDatmHy12e%2FzGjJMI0%2FjETs7fjrM8lYn4q0vCivj94MhpU3oJn7R5vrT16TiGkIgrvGfcMND0TasK6qlsuh5iZIkAbkwBAifqg%3D%3D",
+      "https://www.eci.gov.in/eci-backend/public/api/download?url=LMAhAK6sOPBp%2FNFF0iRfXbEB1EVSLT41NNLRjYNJJP1KivrUxbfqkDatmHy12e%2FzVx8fLfn2ReU7TfrqYobgIkSVndWQy5oAA65MEO143g%2FED2ljjFaayqVRG1VDrFlB7JzdA%2FMQCGyxp%2B%2FFhFSJbnd%2FkZnYIR%2FgThsKlHJquO1QNdRk6cr6SEe4b%2FWJbr3AmnESH1Ld7LQ6WarE%2B%2BkIog%3D%3D",
+      "https://hindi.eci.gov.in/files/file/4692-faq-on-the-presidential-election-2012?do=download&r=11150&confirm=1&t=1&csrfKey=436e64c65410eb750826e9bcdaf950b6"
+    ],
+    "notes_used": 3,
+    "found_sources": true,
+    "note_disagrees": false
+  },
+  "450ccaea0d4020620aa0f01499f49529fcdbe91e": {
+    "claim": "Restrictions – For Declaration, the table explains the restrictions, while others are listed in Section 123 of the ROP, 1951.",
+    "query": "Section 123 Representation of People Act 1951 restrictions",
+    "label": "unverifiable",
+    "quote": null,
+    "explanation": "None of the provided sources mention 'Restrictions – For Declaration', a 'table' explaining restrictions, or a distinction between such a table and Section 123 of the Representation of the People Act, 1951; they only discuss corrupt practices defined under Section 123.",
+    "sources": [
+      "https://elections24.eci.gov.in/docs/2eJLyv9x2w.pdf",
+      "https://api.sci.gov.in/jonew/judis/6860.pdf",
+      "https://api.sci.gov.in/jonew/judis/9418.pdf",
+      "https://www.eci.gov.in/EBooks/Leap_of_faith_Second_Edition/files/basic-html/page257.html"
+    ],
+    "notes_used": 2,
+    "found_sources": true,
+    "note_disagrees": false
   }
 }

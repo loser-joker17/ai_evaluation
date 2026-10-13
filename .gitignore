@@ -4,3 +4,12 @@ __pycache__/
 .env
 .vscode/
 .idea/
+myenv/
+__pycache__/
+*.pyc
+.env
+.vscode/
+.idea/
+
+# notes: keep local, never commit
+data/corpus/*.pdf

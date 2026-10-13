@@ -1,0 +1,46 @@
+{
+  "forumias_gs2_q1": {
+    "status": "success",
+    "errors": [],
+    "seconds": 685.3,
+    "raw_total": 2.48,
+    "final_total": 2.0,
+    "dims": [
+      {
+        "dimension": "relevance",
+        "raw_level": 2,
+        "final_level": 2,
+        "cap_note": null,
+        "audit_note": null
+      },
+      {
+        "dimension": "content_substantiation",
+        "raw_level": 2,
+        "final_level": 2,
+        "cap_note": "2 claim(s) contradicted by official sources: \"ROP, 1951 (Section 8) ensures that everyone in the nation has right to\"; \"For Lok Sabha anyone from the nation (citizen of India, 25 years age) \". 2 possible factual error(s), unverified: \"Committed an offence under laws like IPC or Food Adulteration Act.\"; \"Restrictions – For Declaration, the table explains the restrictions, w\".",
+        "audit_note": null
+      },
+      {
+        "dimension": "analysis_depth",
+        "raw_level": 1,
+        "final_level": 1,
+        "cap_note": null,
+        "audit_note": null
+      },
+      {
+        "dimension": "coverage_balance",
+        "raw_level": 2,
+        "final_level": 2,
+        "cap_note": "Answer exceeds the word limit (277 of 150 words), so its coverage was not achieved within the allowed length.",
+        "audit_note": null
+      },
+      {
+        "dimension": "structure_presentation",
+        "raw_level": 3,
+        "final_level": 3,
+        "cap_note": "Answer exceeds the 150-word limit.",
+        "audit_note": null
+      }
+    ]
+  }
+}

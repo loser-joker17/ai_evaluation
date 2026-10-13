@@ -23,9 +23,9 @@ def test_compute_caps():
     assert compute_caps({"has_conclusion": True}, 100, 150, "within_limit") == {}
     assert "structure_presentation" in compute_caps({"has_conclusion": False}, 100, 150, "within_limit")
     assert "coverage_balance" in compute_caps({"has_conclusion": True}, 40, 150, "under_limit")
-    both = compute_caps({"has_conclusion": False}, 200, 150, "over_limit")
+    both = compute_caps({"has_conclusion": False}, 320, 150, "over_limit")
     note = both["structure_presentation"][1]
-    assert "exceeds" in note and "No concluding" in note
+    assert "double" in note and "No concluding" in note
 
 def raw(levels, evidence=None, improvement="None"):
     ev = ["Alpha beta gamma delta."] if evidence is None else evidence
@@ -101,9 +101,9 @@ def test_low_levels_are_not_audited():
     assert all(s["final_level"] == 2 and s["audit_note"] is None for s in res.values())
 
 
-def test_over_limit_caps_structure_only():
+def test_moderately_over_limit_does_not_cap_structure():
     res = finalize(raw(4), status="over_limit")
-    assert res["structure_presentation"]["final_level"] == 3
+    assert res["structure_presentation"]["final_level"] == 4
     assert res["relevance"]["final_level"] == 4
 
 
@@ -177,7 +177,8 @@ def test_compute_caps_analysis_and_overlimit():
     caps = compute_caps({"has_conclusion": True, "mechanisms_explained": 1}, 100, 150, "within_limit")
     assert caps["analysis_depth"][0] == 3
     caps = compute_caps({"has_conclusion": True, "mechanisms_explained": 3}, 200, 150, "over_limit")
-    assert caps["coverage_balance"][0] == 4
+    assert "coverage_balance" not in caps
+    assert "structure_presentation" not in caps
     assert "analysis_depth" not in caps
 
 def test_verify_concerns_filters():
@@ -198,8 +199,8 @@ def test_concerns_cap_content_substantiation():
         factual_concerns=concerns,
     )
     by = {s["dimension"]: s for s in scores}
-    assert by["content_substantiation"]["final_level"] <= 3
-    assert "possible factual" in by["content_substantiation"]["cap_note"]
+    assert "Double-check" in by["content_substantiation"]["improvement"]
+    assert "unverified" not in (by["content_substantiation"]["cap_note"] or "")
     assert by["relevance"]["final_level"] > 3
 
 def test_confirmed_errors_cap_content():
@@ -212,3 +213,23 @@ def test_confirmed_errors_cap_content():
     by = {s["dimension"]: s for s in scores}
     assert by["content_substantiation"]["final_level"] <= 3
     assert "contradicted by official sources" in by["content_substantiation"]["cap_note"]
+
+
+def test_well_over_limit_caps_structure_at_4():
+    assert compute_caps({"has_conclusion": True}, 255, 150, "over_limit")["structure_presentation"][0] == 4
+
+
+def test_double_limit_caps_structure_at_3():
+    assert compute_caps({"has_conclusion": True}, 320, 150, "over_limit")["structure_presentation"][0] == 3
+
+
+def test_analysis_expectation():
+    from app.evaluator.scoring import analysis_expectation
+    assert analysis_expectation("Elaborate on the significance") == "descriptive"
+    assert analysis_expectation("Describe") == "descriptive"
+    assert analysis_expectation("Identify and discuss") == "descriptive"
+    assert analysis_expectation("Critically examine") == "analytical"
+    assert analysis_expectation("Analyze") == "analytical"
+    assert analysis_expectation("Discuss") == "balanced"
+    assert analysis_expectation("") == "balanced"
+    assert analysis_expectation(None) == "balanced"

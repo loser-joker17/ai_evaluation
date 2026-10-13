@@ -1,6 +1,6 @@
 import re
 
-from app.llm import llm
+from app.llm import light_llm as llm  # LIGHT_MODEL; same model as before unless you set it
 from app.schemas import AnswerFeatures, RawAnswerFeatures
 
 INTRO_WINDOW = 2        # intro must be within the first N sentences

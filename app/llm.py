@@ -49,6 +49,7 @@ def make_llm(model: str, timeout: int = 180) -> ChatOpenAI:
         temperature=0,
         max_retries=2,
         timeout=timeout,
+        seed=7,
     )
 
 
@@ -62,3 +63,11 @@ judge_llm = make_llm(
 )
 
 llm = fast_llm  # Existing imports keep working
+
+
+# Smaller/faster model for question analysis and feature extraction.
+# Same as FAST_MODEL unless LIGHT_MODEL is set in .env.
+light_llm = make_llm(
+    os.getenv("LIGHT_MODEL")
+    or os.getenv("FAST_MODEL", "nvidia/nemotron-3-ultra-550b-a55b")
+)

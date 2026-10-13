@@ -11,7 +11,8 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 277
+    "word_count": 277,
+    "heldout": false
   },
   {
     "id": "forumias_gs2_q2",
@@ -25,7 +26,8 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 282
+    "word_count": 282,
+    "heldout": false
   },
   {
     "id": "forumias_gs2_q3",
@@ -39,7 +41,8 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 205
+    "word_count": 205,
+    "heldout": true
   },
   {
     "id": "forumias_gs2_q4",
@@ -53,7 +56,8 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 255
+    "word_count": 255,
+    "heldout": false
   },
   {
     "id": "forumias_gs2_q5",
@@ -67,7 +71,8 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 212
+    "word_count": 212,
+    "heldout": true
   },
   {
     "id": "forumias_gs2_q6",
@@ -81,7 +86,8 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 212
+    "word_count": 212,
+    "heldout": false
   },
   {
     "id": "forumias_gs2_q7",
@@ -95,7 +101,8 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 200
+    "word_count": 200,
+    "heldout": true
   },
   {
     "id": "forumias_gs2_q8",
@@ -109,7 +116,8 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 183
+    "word_count": 183,
+    "heldout": false
   },
   {
     "id": "forumias_gs2_q9",
@@ -123,7 +131,8 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 203
+    "word_count": 203,
+    "heldout": false
   },
   {
     "id": "forumias_gs2_q10",
@@ -137,6 +146,7 @@
     "word_limit": 150,
     "institute": "ForumIAS-GS2",
     "marks_source": "examiner",
-    "word_count": 254
+    "word_count": 254,
+    "heldout": true
   }
 ]

@@ -15,6 +15,10 @@ DIMENSION_WEIGHTS = {
     "structure_presentation": 0.15,
 }
 
+# to answers about 70% over the limit and did not penalise length.
+OVER_LIMIT_SOFT_RATIO = 1.5   # beyond this, structure is capped at level 4
+OVER_LIMIT_HARD_RATIO = 2.0   # beyond this, structure is capped at level 3
+
 # Level 5 needs this many valid quotes, each at least this many words long.
 MIN_LEVEL5_QUOTES = 3
 MIN_QUOTE_WORDS = 8
@@ -48,6 +52,63 @@ def dimension_max(dimension: str, max_marks: int) -> float:
     return round(DIMENSION_WEIGHTS[dimension] * max_marks, 2)
 
 
+# ------------------------------------------------ analysis_depth by directive
+# "Describe / elaborate / identify" questions ask for specific, well-illustrated
+# points. "Critically examine / analyse" questions ask for explained mechanisms.
+# Everything else (discuss, comment, examine, explain, ...) sits in between.
+_DESCRIPTIVE_DIRECTIVES = (
+    "describe", "elaborate", "enumerate", "identify", "outline", "list",
+    "state", "mention", "highlight", "illustrate", "trace",
+)
+_ANALYTICAL_DIRECTIVES = (
+    "critically", "analyse", "analyze", "evaluate", "assess", "justify",
+    "to what extent", "how far", "do you agree",
+)
+
+ANALYSIS_LEVELS = {
+    "analytical": """  5 explains causal mechanisms, examines implications or trade-offs,
+    and develops a reasoned argument
+  4 explains the reasoning behind most major points
+  3 explains some points but is mostly descriptive
+  2 offers limited explanation
+  1 mainly lists assertions without explaining them
+  0 provides no meaningful analysis""",
+    "balanced": """  5 explains causal mechanisms, examines implications or trade-offs,
+    and develops a reasoned argument
+  4 gives a reason, mechanism or consequence for most major points
+  3 gives a reason, mechanism, consequence or concrete example for some
+    points; the rest are specific but unexplained
+  2 is mostly bare points, with only occasional reasoning or examples
+  1 is only bare, generic labels with no reasons or examples
+  0 provides no meaningful analysis
+  Short, point-style answers are acceptable when each point carries a reason,
+  mechanism, consequence or concrete example.""",
+    "descriptive": """  5 nearly every point is specific and linked to the demand, with an example,
+    data or brief reason, and the points span diverse dimensions
+  4 most points are specific and supported by an example, data or brief reason
+  3 points are relevant and fairly specific, with some examples or reasons;
+    others are bare labels
+  2 is mostly bare labels with few examples or reasons
+  1 is only generic assertions with no specifics or reasons
+  0 provides no meaningful analysis
+  This question asks the candidate to describe, elaborate or identify. Short,
+  crisp points that each carry a specific example, fact or reason are good
+  analysis here. Do not require long explanation of every point.""",
+}
+
+
+def analysis_expectation(directive) -> str:
+    """Return 'analytical', 'descriptive' or 'balanced' for a question directive."""
+    d = str(directive or "").lower()
+    for kw in _ANALYTICAL_DIRECTIVES:
+        if re.search(r"\b" + re.escape(kw) + r"\b", d):
+            return "analytical"
+    for kw in _DESCRIPTIVE_DIRECTIVES:
+        if re.search(r"\b" + re.escape(kw) + r"\b", d):
+            return "descriptive"
+    return "balanced"
+
+
 # ------------------------------------------------------------------ LLM call
 
 def score_answer(
@@ -62,6 +123,9 @@ def score_answer(
     features: dict,
 ) -> dict:
     structured_llm = llm.with_structured_output(DimensionScoresResponse)
+
+    directive = question_analysis.get("directive", "") if isinstance(question_analysis, dict) else ""
+    analysis_levels = ANALYSIS_LEVELS[analysis_expectation(directive)]
 
     prompt = f"""
 You are an experienced, strict UPSC GS Mains answer evaluator.
@@ -99,6 +163,21 @@ GENERAL SCORING PRINCIPLES
 - Distinguish missing coverage from irrelevant content.
 - Use detected features as supporting evidence, not infallible ground truth.
 
+DIMENSION BOUNDARIES (each dimension judges ONE thing)
+- Something missing from the answer (a fact, event, aspect or example) can
+  lower coverage_balance ONLY. Never lower relevance, content_substantiation
+  or analysis_depth because something is absent.
+- relevance: does what is WRITTEN respond to the directive and the demand?
+- content_substantiation: judge the specifics that are PRESENT, not specifics
+  that could have been added.
+- analysis_depth: judge the reasoning that is PRESENT.
+- Do not mark the answer down for facts the question did not ask for. Do not
+  compare it with a model answer that would not fit in the word limit.
+- Before finalising, check your justifications: if the same missing item is the
+  reason for lowering more than one dimension, restore the other dimensions to
+  the level the written content deserves and keep the reduction only in
+  coverage_balance.
+
 relevance
   5 directly and clearly answers all central demands of the question
   4 answers the central demands with minor omissions or drift
@@ -106,6 +185,8 @@ relevance
   2 only partly responds to the question or misunderstands a demand
   1 has little relevant content
   0 is essentially off topic
+  An answer whose points respond to the directive and the demand is at least
+  level 3 even if it omits some aspects; omissions belong in coverage_balance.
 
 content_substantiation (accuracy and specificity)
   5 uses multiple accurate, relevant specifics that substantiate its arguments
@@ -117,15 +198,11 @@ content_substantiation (accuracy and specificity)
     undermines the answer
   Do not assume a claim is false merely because it cannot be verified here.
   Do not award extra credit for irrelevant references or name-dropping.
+  Do not lower this level for specifics the answer could have added; judge
+  the specifics it actually gives.
 
 analysis_depth
-  5 explains causal mechanisms, examines implications or trade-offs,
-    and develops a reasoned argument
-  4 explains the reasoning behind most major points
-  3 explains some points but is mostly descriptive
-  2 offers limited explanation
-  1 mainly lists assertions without explaining them
-  0 provides no meaningful analysis
+{analysis_levels}
 
 coverage_balance
   5 covers the central demands comprehensively and balances them well
@@ -173,7 +250,8 @@ FACTUAL CONCERNS
 - confidence: "high" only if you are sure. Use "medium" or "low" if you are
   unsure. Only "high" affects the score.
 - Do NOT list: missing information, vague or incomplete points, opinions,
-  reform suggestions, or claims you merely cannot verify.
+  value judgements, reform suggestions, claims you merely cannot verify,
+  or anything you cannot judge from general knowledge.
 - Do NOT list a claim that is partly right but imprecise; that is a weakness
   of precision, not a factual error.
 - If you find none, return an empty list. An empty list is the normal case.
@@ -196,27 +274,33 @@ def compute_caps(
     """Apply only conservative, high-confidence caps."""
     caps: dict[str, tuple[int, str]] = {}
 
-    # Structure: over the limit and/or no conclusion
+    # Structure: far over the limit and/or no conclusion
+    structure_cap = 5
     structure_reasons = []
-    if word_limit_status == "over_limit":
-        structure_reasons.append(f"Answer exceeds the {word_limit}-word limit.")
+    if word_limit and word_limit_status == "over_limit":
+        ratio = word_count / word_limit
+        if ratio > OVER_LIMIT_HARD_RATIO:
+            structure_cap = 3
+            structure_reasons.append(
+                f"Answer is more than double the {word_limit}-word limit ({word_count} words)."
+            )
+        elif ratio > OVER_LIMIT_SOFT_RATIO:
+            structure_cap = 4
+            structure_reasons.append(
+                f"Answer is well over the {word_limit}-word limit ({word_count} words)."
+            )
     if not features.get("has_conclusion", True):
+        structure_cap = min(structure_cap, 3)
         structure_reasons.append("No concluding sentence.")
     if structure_reasons:
-        caps["structure_presentation"] = (3, " ".join(structure_reasons))
+        caps["structure_presentation"] = (structure_cap, " ".join(structure_reasons))
 
-    # Coverage: too short OR over the limit
+    # Coverage: too short only. Being over the limit is handled under structure.
     if word_limit and word_limit_status == "under_limit":
         pct = round(100 * word_count / word_limit)
         caps["coverage_balance"] = (
             3,
             f"Answer uses {word_count} of the {word_limit} words ({pct}%).",
-        )
-    elif word_limit and word_limit_status == "over_limit":
-        caps["coverage_balance"] = (
-            4,
-            f"Answer exceeds the word limit ({word_count} of {word_limit} words), "
-            "so its coverage was not achieved within the allowed length.",
         )
 
     # Analysis: fewer than 2 explained mechanisms means mostly assertions
@@ -227,7 +311,6 @@ def compute_caps(
         )
 
     return caps
-
 # ------------------------------------------------- judge audit (LLM mistakes)
 
 def _norm(text: str) -> str:
@@ -359,6 +442,7 @@ def finalize_scores(
         dim = item["dimension"]
         raw_level = item["score"]
         level, cap_note = raw_level, None
+        concern_note = None
 
         # 1. Candidate-facing caps. Note is kept even if the LLM was already low.
         if dim in caps:
@@ -373,20 +457,19 @@ def finalize_scores(
 
                 # 2b. Factual problems limit content_substantiation. Confirmed errors
         #     (contradicted by an official source) and the judge's unverified
-        #     concerns both count toward the cap.
+        #     concerns are shown as notes only (not scored).
         if dim == "content_substantiation" and (confirmed_errors or factual_concerns):
             n_conf = len(confirmed_errors or [])
-            n_unv = len(factual_concerns or [])
-            level = min(level, 3 if (n_conf + n_unv) == 1 else 2)
-
-            parts = []
             if n_conf:
+                # Only errors contradicted by an official source lower the level.
+                level = min(level, 3 if n_conf == 1 else 2)
                 listed = "; ".join(f'"{c["claim"][:70]}"' for c in confirmed_errors[:3])
-                parts.append(f"{n_conf} claim(s) contradicted by official sources: {listed}.")
-            if n_unv:
+                conf_note = f"{n_conf} claim(s) contradicted by official sources: {listed}."
+                cap_note = " ".join(n for n in (cap_note, conf_note) if n)
+            if factual_concerns:
+                # The judge's own concerns are not scored; the candidate is told to check them.
                 listed = "; ".join(f'"{c["claim"][:70]}"' for c in factual_concerns[:3])
-                parts.append(f"{n_unv} possible factual error(s), unverified: {listed}.")
-            cap_note = " ".join(n for n in (cap_note, *parts) if n)
+                concern_note = (f"Double-check (flagged, not confirmed, not scored): {listed}.")
 
         # 3. If a cap applies, use its wording instead of the judge's text,
         #    which may contradict the verified facts (e.g. "has a conclusion").
@@ -399,6 +482,9 @@ def finalize_scores(
         else:
             justification = item.get("justification", "")
             improvement = item.get("improvement", "")
+
+        if concern_note:
+            improvement = f"{improvement} {concern_note}".strip()
 
         dmax = dimension_max(dim, max_marks)
         final.append({

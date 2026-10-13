@@ -1,3 +1,7 @@
+import contextvars
+import copy
+from concurrent.futures import ThreadPoolExecutor
+
 from langgraph.graph import StateGraph, START, END
 
 from app.evaluator.factcheck import fact_check
@@ -58,15 +62,31 @@ def analyze_input_node(state: EvaluatorState) -> dict:
 
 # ------------------------------------------------------ question analysis
 
+# The same question is often evaluated many times (a test paper, a class), and the
+# analysis depends only on the question, so it is computed once per process.
+_QA_CACHE: dict = {}
+_QA_CACHE_MAX = 256
+
+
 def analyze_question_node(state: EvaluatorState) -> dict:
-    result = analyze_question(
-        question=state["question"],
-        subject=state["subject"],
-        max_marks=state["max_marks"],
-        word_limit=state.get("word_limit"),
+    key = (
+        state["question"].strip(),
+        state["subject"],
+        state["max_marks"],
+        state.get("word_limit"),
     )
 
-    return {"question_analysis": result}
+    if key not in _QA_CACHE:
+        if len(_QA_CACHE) >= _QA_CACHE_MAX:
+            _QA_CACHE.pop(next(iter(_QA_CACHE)))
+        _QA_CACHE[key] = analyze_question(
+            question=state["question"],
+            subject=state["subject"],
+            max_marks=state["max_marks"],
+            word_limit=state.get("word_limit"),
+        )
+
+    return {"question_analysis": copy.deepcopy(_QA_CACHE[key])}
 
 
 # --------------------------------------------------------------- features
@@ -155,6 +175,32 @@ def fact_check_node(state: EvaluatorState) -> dict:
             "evidence_gaps": [f"Fact check skipped ({type(exc).__name__})."],
         }
     return {"claim_verifications": verifications, "evidence_gaps": gaps}
+
+# ------------------------------------------------- prepare (runs in parallel)
+
+def prepare_node(state: EvaluatorState) -> dict:
+    """Run two independent jobs at the same time:
+         A) question analysis, then feature extraction (features need the analysis)
+         B) fact check (needs only the answer)
+    Total time is max(A, B) instead of A + B. fact_check_node never raises."""
+
+    def chain() -> dict:
+        update = analyze_question_node(state)
+        update.update(extract_features_node({**state, **update}))
+        return update
+
+    def in_own_context(fn, *args):
+        # keeps LangSmith tracing attached to the parent run inside worker threads
+        return contextvars.copy_context().run(fn, *args)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        job_a = pool.submit(in_own_context, chain)
+        job_b = pool.submit(in_own_context, fact_check_node, state)
+        merged = {}
+        merged.update(job_a.result())   # an error here is raised, as before
+        merged.update(job_b.result())
+    return merged
+
 
 def route_after_scoring(state: EvaluatorState) -> str:
     return "generate_feedback" if state.get("scores_valid") else "return_error"
@@ -256,11 +302,16 @@ def return_error_node(state: EvaluatorState) -> dict:
     if not errors:
         errors = ["Evaluation could not be completed."]
 
+    # The input may be exactly what failed validation, so never echo it back unchecked.
+    max_marks = state.get("max_marks")
+    if not isinstance(max_marks, int) or isinstance(max_marks, bool):
+        max_marks = 10
+
     output = EvaluationOutput(
         status="error",
-        question=state.get("question", ""),
-        subject=state.get("subject", ""),
-        max_marks=state.get("max_marks", 10),
+        question=str(state.get("question", "")),
+        subject=str(state.get("subject", "")),
+        max_marks=max_marks,
         errors=errors,
         limitations=["No successful evaluation result was produced."],
     )
@@ -275,14 +326,12 @@ def build_evaluator_graph():
 
     builder.add_node("validate_input", validate_input_node)
     builder.add_node("analyze_input", analyze_input_node)
-    builder.add_node("analyze_question", analyze_question_node)
-    builder.add_node("extract_features", extract_features_node)
+    builder.add_node("prepare", prepare_node)
     builder.add_node("evaluate_answer", evaluate_answer_node)
     builder.add_node("generate_feedback", generate_feedback_node)
     builder.add_node("check_feedback_consistency",check_feedback_consistency_node)
     builder.add_node("build_result", build_result_node)
     builder.add_node("return_error", return_error_node)
-    builder.add_node("fact_check", fact_check_node)
 
     builder.add_edge(START, "validate_input")
 
@@ -295,10 +344,8 @@ def build_evaluator_graph():
         },
     )
 
-    builder.add_edge("analyze_input", "analyze_question")
-    builder.add_edge("analyze_question", "extract_features")
-    builder.add_edge("extract_features", "fact_check")
-    builder.add_edge("fact_check", "evaluate_answer")
+    builder.add_edge("analyze_input", "prepare")
+    builder.add_edge("prepare", "evaluate_answer")
 
     builder.add_conditional_edges(
         "evaluate_answer",
@@ -326,3 +373,20 @@ def evaluate_submission(data: dict | EvaluationInput) -> dict:
 
     result = chatbot.invoke(data)
     return result["final_result"]
+
+
+def evaluate_submission_stream(data: dict | EvaluationInput):
+    """Yield (node_name, update) as each step finishes, so a UI can show progress
+    (for example the marks as soon as scoring is done, before the feedback text).
+    The last event is ("final", <the same dict evaluate_submission returns>)."""
+    if isinstance(data, EvaluationInput):
+        data = data.model_dump()
+
+    for chunk in chatbot.stream(data, stream_mode="updates"):
+        for node, update in chunk.items():
+            if not update:
+                continue
+            if "final_result" in update:
+                yield "final", update["final_result"]
+            else:
+                yield node, update

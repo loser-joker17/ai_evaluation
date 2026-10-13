@@ -13,3 +13,4 @@ __pycache__/
 
 # notes: keep local, never commit
 data/corpus/*.pdf
+data/benchmark/results/state_cache/

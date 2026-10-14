@@ -7,7 +7,8 @@ from typing import Literal
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-from app.retrieval.corpus import search_corpus
+from app.retrieval import corpus as _corpus
+from app.retrieval.corpus import paper_from_subject, search_corpus
 
 from app.llm import llm
 
@@ -68,8 +69,22 @@ def _tavily():
     return _client
 
 
-def _cache_key(claim: str) -> str:
-    return hashlib.sha1(_squash(claim).encode()).hexdigest()
+def _corpus_version() -> str:
+    """Changes whenever the notes index or the tag manifest changes, so a verdict cached
+    before the corpus grew is not reused."""
+    parts = []
+    for f in (_corpus.CACHE_FILE, _corpus.MANIFEST_FILE):
+        try:
+            st = f.stat()
+            parts.append(f"{st.st_size}:{int(st.st_mtime)}")
+        except OSError:
+            parts.append("none")
+    return "|".join(parts)
+
+
+def _cache_key(claim: str, papers: list[str] | None = None) -> str:
+    raw = f"{_squash(claim)}||{','.join(papers or [])}||{_corpus_version()}"
+    return hashlib.sha1(raw.encode()).hexdigest()
 
 
 def _load_cache() -> dict:
@@ -126,10 +141,11 @@ If there are none, return an empty list.
 
 # ------------------------------------------------------------ search
 
-def search_evidence(query: str, max_results: int = 4) -> list[dict]:
+def search_evidence(query: str, max_results: int = 4, papers: list[str] | None = None) -> list[dict]:
+    extra = {"papers": papers} if papers else {}     # a paper filter falls back to all notes if empty
     sources = [
         {"url": s["url"], "text": s["text"], "tier": "notes"}
-        for s in search_corpus(query, k=3)
+        for s in search_corpus(query, k=3, **extra)
     ]
     if WEB_MODE == "always" or not sources:
         try:
@@ -186,13 +202,14 @@ RULES:
     return label, v.quote, v.explanation, note_only
 
 
-def verify_claim(claim: str, query: str | None = None, use_cache: bool = True) -> dict:
+def verify_claim(claim: str, query: str | None = None, use_cache: bool = True,
+                 papers: list[str] | None = None) -> dict:
     cache = _load_cache() if use_cache else {}
-    key = _cache_key(claim)
+    key = _cache_key(claim, papers)
     if key in cache:
         return cache[key]
 
-    sources = search_evidence(query or claim)
+    sources = search_evidence(query or claim, **({"papers": papers} if papers else {}))
     official_urls = [s["url"] for s in sources if s["tier"] == "official"]
     result = {
         "claim": claim, "query": query or claim, "label": "unverifiable",
@@ -226,12 +243,14 @@ def verify_claim(claim: str, query: str | None = None, use_cache: bool = True) -
         _save_cache(cache)
     return result
 
-def fact_check(answer: str) -> tuple[list[dict], list[str]]:
+def fact_check(answer: str, subject: str | None = None) -> tuple[list[dict], list[str]]:
     """Extract checkable claims and verify each. Returns (verifications, evidence_gaps)."""
     verifications, gaps = [], []
+    paper = paper_from_subject(subject)               # "GS-2" -> "GS2"; None if not recognised
+    extra = {"papers": [paper]} if paper else {}
     for c in extract_claims(answer):
         try:
-            v = verify_claim(c["claim"], c["query"])
+            v = verify_claim(c["claim"], c["query"], **extra)
         except Exception as exc:                      # one failed search must not stop the rest
             gaps.append(f"Could not check: \"{c['claim'][:70]}\" ({type(exc).__name__}).")
             continue

@@ -31,12 +31,14 @@ def overlap(a: str, b: str) -> float:
 
 
 def evaluate(test: dict, deduplicate: bool) -> dict:
-    results = corpus.search_corpus(test["query"], k=K, deduplicate=deduplicate)
+    results = corpus.search_corpus(test["query"], k=K, deduplicate=deduplicate,
+                                   papers=test.get("papers"), fallback=test.get("fallback", True))
+    paper = (test.get("papers") or ["-"])[0]
     expected = test["expected"]
 
     if not expected:                       # the notes should NOT answer this
         return {"query": test["query"], "results": results, "flags": [False] * len(results),
-                "returned": len(results), "negative": True, "pass": int(len(results) == 0)}
+                "returned": len(results), "negative": True, "pass": int(len(results) == 0), "paper": paper}
 
     flags = [relevant(r, expected) for r in results]
     covered = {
@@ -50,7 +52,7 @@ def evaluate(test: dict, deduplicate: bool) -> dict:
     first = next((i for i, f in enumerate(flags) if f), None)
     return {
         "query": test["query"], "results": results, "flags": flags, "returned": len(results),
-        "negative": False,
+        "negative": False, "paper": paper,
         "hit": int(any(flags)),
         "mrr": 1 / (first + 1) if first is not None else 0.0,
         "precision": sum(flags) / len(results) if results else 0.0,
@@ -79,6 +81,10 @@ def main():
             print(f"Hit@3 {avg(pos,'hit'):.2f} | MRR {avg(pos,'mrr'):.2f} | "
                   f"Precision {avg(pos,'precision'):.2f} | Recall {avg(pos,'recall'):.2f} | "
                   f"Dup {avg(pos,'dup'):.2f} | Avg returned {avg(pos,'returned'):.1f}")
+        for pp in sorted({r["paper"] for r in pos}):
+            sub_ = [r for r in pos if r["paper"] == pp]
+            print(f"  {pp:<5} n={len(sub_):<3} Hit@3 {avg(sub_,'hit'):.2f} | MRR {avg(sub_,'mrr'):.2f} | "
+                  f"Recall {avg(sub_,'recall'):.2f}")
         print(f"--- {name}: no-answer queries ({len(neg)}) ---")
         if neg:
             print(f"Correctly returned nothing: {sum(r['pass'] for r in neg)} of {len(neg)}")

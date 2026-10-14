@@ -1,0 +1,195 @@
+{
+  "_help": "Key = PDF file name without .pdf (case/spacing/punctuation ignored). papers: GS1-GS4. subject: free label used by the subjects= filter. kind: 'notes' or 'ncert' (ncert is down-weighted). priority: lower number wins when two files contain near-identical passages. Edit freely; no cache rebuild needed. 'check' marks tags I guessed from the file name - verify them.",
+  "Indian Polity and Constitution": {
+    "papers": [
+      "GS2"
+    ],
+    "subject": "polity",
+    "kind": "notes",
+    "priority": 0
+  },
+  "Governance": {
+    "papers": [
+      "GS2"
+    ],
+    "subject": "governance",
+    "kind": "notes",
+    "priority": 1
+  },
+  "complete_Polity": {
+    "papers": [
+      "GS2"
+    ],
+    "subject": "polity",
+    "kind": "notes",
+    "priority": 2
+  },
+  "Social Justice": {
+    "papers": [
+      "GS2"
+    ],
+    "subject": "social_justice",
+    "kind": "notes",
+    "priority": 3
+  },
+  "GS_2-INTERNATIONAL-RELATIONS": {
+    "papers": [
+      "GS2"
+    ],
+    "subject": "international_relations",
+    "kind": "notes",
+    "priority": 3
+  },
+  "gs2_topics_final_merge": 
+   {
+      "papers": ["GS2"], 
+      "subject": "gs2_mixed", 
+      "kind": "notes", 
+      "priority": 4,
+      "extractor": "pymupdf"
+   },
+  "Art and Culture": {
+    "papers": [
+      "GS1"
+    ],
+    "subject": "art_culture",
+    "kind": "notes",
+    "priority": 3
+  },
+  "Arts_and_Sociology": {
+    "papers": ["GS1", "GS2"], 
+    "subject": "society_polity", "kind": "ncert", "priority": 7
+  },
+  "Complete_History_Final_Notes": {
+    "papers": [
+      "GS1"
+    ],
+    "subject": "history",
+    "kind": "notes",
+    "priority": 3
+  },
+  "GS-1-Notes---Post-Independence-History": {
+    "papers": [
+      "GS1"
+    ],
+    "subject": "history",
+    "kind": "notes",
+    "priority": 3
+  },
+  "gs1_pdf": {
+    "papers": [
+      "GS1"
+    ],
+    "subject": "gs1_mixed",
+    "kind": "notes",
+    "priority": 4,
+    "check": "what does this cover?"
+  },
+  "Geography and Disaster Management": {
+    "papers": [
+      "GS1",
+      "GS3"
+    ],
+    "subject": "geography_disaster",
+    "kind": "notes",
+    "priority": 3,
+    "check": "geography is GS1, disaster management is GS3"
+  },
+  "Ncert_History": {
+    "papers": [
+      "GS1"
+    ],
+    "subject": "history",
+    "kind": "ncert",
+    "priority": 8
+  },
+  "Ncert_Geography": {
+    "papers": [
+      "GS1",
+      "GS3"
+    ],
+    "subject": "geography_disaster",
+    "kind": "ncert",
+    "priority": 9
+  },
+  "Economy": {
+    "papers": [
+      "GS3"
+    ],
+    "subject": "economy",
+    "kind": "notes",
+    "priority": 3
+  },
+  "Economics": {
+    "papers": [
+      "GS3"
+    ],
+    "subject": "economy",
+    "kind": "notes",
+    "priority": 4
+  },
+  "Science_and_Technology": {
+    "papers": [
+      "GS3"
+    ],
+    "subject": "science_tech",
+    "kind": "notes",
+    "priority": 3
+  },
+  "General_Science_Final_Notes": {
+    "papers": [
+      "GS3"
+    ],
+    "subject": "science_tech",
+    "kind": "notes",
+    "priority": 4
+  },
+  "Internal Security": {
+    "papers": [
+      "GS3"
+    ],
+    "subject": "internal_security",
+    "kind": "notes",
+    "priority": 3
+  },
+  "ECOLOGY & ENVIRONMENT": {
+    "papers": [
+      "GS3"
+    ],
+    "subject": "environment",
+    "kind": "notes",
+    "priority": 3
+  },
+  "agricular_merged": {
+    "papers": [
+      "GS3"
+    ],
+    "subject": "agriculture",
+    "kind": "notes",
+    "priority": 3
+  },
+  "Ethics Handout CSE Mains": {
+    "papers": [
+      "GS4"
+    ],
+    "subject": "ethics",
+    "kind": "notes",
+    "priority": 3
+  },
+  "Ethics, Integrity and Aptitude": {
+    "papers": [
+      "GS4"
+    ],
+    "subject": "ethics",
+    "kind": "notes",
+    "priority": 3
+  },
+  "V&R Mains Smasher Ethics 2026": {
+    "papers": [
+      "GS4"
+    ],
+    "subject": "ethics",
+    "kind": "notes",
+    "priority": 4
+  }
+}

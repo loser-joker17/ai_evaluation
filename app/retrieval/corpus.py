@@ -17,7 +17,8 @@ CHUNK_STEP = 140         # 40-word overlap
 REPEAT_SHARE = 0.30       # a line on >30% of pages is a running header/footer
 DEDUPE_JACCARD = 0.5
 MIN_CHUNK_WORDS = 80
-RARE_DF_SHARE = 0.02   # a term in under 2% of chunks counts as rare (about 12 of 579)
+RARE_DF_SHARE = 0.02   # a term in under 2% of chunks counts as rare ...
+RARE_DF_MAX = 12       # ... but never more than this many chunks (keeps the guard strict as the corpus grows)
 
 # Lower number = preferred when two chunks are near-duplicates.
 FILE_PRIORITY = {
@@ -26,7 +27,12 @@ FILE_PRIORITY = {
     "complete_polity": 2,
 }
 
-INLINE_JUNK = re.compile(r"INDIAN POLITY BY VYASA IAS|VYASA IAS", re.I)
+# Tags per PDF live in data/corpus_manifest.json (edit it without rebuilding the cache).
+MANIFEST_FILE = Path("data/corpus_manifest.json")
+# Textbook prose (NCERT) is dense and not exam-shaped; it backs up the notes instead of outranking them.
+KIND_WEIGHT = {"notes": 1.0, "ncert": 0.9}
+
+INLINE_JUNK = re.compile(r"INDIAN POLITY BY VYASA IAS|VYASA IAS|/rhombbutton\d*", re.I)
 PRIVATE_CHARS = re.compile(r"[\ue000-\uf8ff\ufffd\u200b\u00ad\u00be]")
 LINE_BLOCKLIST = {
     "governance",
@@ -45,11 +51,56 @@ STOP = set(
 )
 
 
+# ----------------------------------------------------------- tags
+
+_ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4}
+_manifest: dict | None = None
+
+
+def _key(stem: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", stem.lower()).strip("_")
+
+
+def load_manifest(force: bool = False) -> dict:
+    global _manifest
+    if _manifest is None or force:
+        try:
+            raw = json.loads(MANIFEST_FILE.read_text(encoding="utf-8-sig"))
+        except FileNotFoundError:
+            print(f"WARNING: {MANIFEST_FILE} not found - no paper/subject tags will be applied.", file=sys.stderr)
+            raw = {}
+        except json.JSONDecodeError as exc:
+            print(f"WARNING: {MANIFEST_FILE} is not valid JSON ({exc}) - no tags applied.", file=sys.stderr)
+            raw = {}
+        _manifest = {_key(k): v for k, v in raw.items() if not k.startswith("_")}
+    return _manifest
+
+
+def file_meta(stem: str) -> dict:
+    m = load_manifest().get(_key(stem))
+    return {
+        "tagged": m is not None,
+        "papers": [str(x).upper().replace("-", "").replace(" ", "") for x in (m or {}).get("papers", [])],
+        "subject": str((m or {}).get("subject", "untagged")).lower(),
+        "kind": (m or {}).get("kind", "notes"),
+    }
+
+
+def paper_from_subject(subject) -> str | None:
+    """'GS-2', 'GS2', 'General Studies Paper III', 'gs iv' -> 'GS2' / 'GS3' / 'GS4'; None if unknown."""
+    s = re.sub(r"[^A-Z0-9]+", " ", str(subject or "").upper())
+    m = re.search(r"\b(?:GS|GENERAL STUDIES)\s*(?:PAPER\s*)?(IV|III|II|I|[1-4])\b", s)
+    if not m:
+        return None
+    v = m.group(1)
+    return f"GS{_ROMAN.get(v) or int(v)}"
+
+
 # ----------------------------------------------------------- cleaning
 
 
 def _norm_line(line: str) -> str:
-    line = re.sub(r"(?<=\d)\ue00b(?=\d)", ".", line)
+    line = re.sub(r"(?<=\d)[\ue00b\ufffd](?=\d)", ".", line)
     line = PRIVATE_CHARS.sub(" ", line)
     line = INLINE_JUNK.sub(" ", line)
     return " ".join(line.split())
@@ -132,6 +183,19 @@ def chunk_pages(pages: list[tuple[int, str]]):
     return chunks
 
 
+_YEAR_TAG = re.compile(r"\((?:19|20)\d{2}\)")
+_DIRECTIVE = re.compile(r"\b(?:discuss|examine|critically|comment|analy[sz]e|elaborate|illustrate|evaluate|substantiate)\b", re.I)
+
+
+def is_question_list(text: str) -> bool:
+    """A chunk that is mostly past-year exam questions: several '?' plus year tags, or many year
+    tags with several directive words. Such text is a question, not a fact."""
+    years = len(_YEAR_TAG.findall(text))
+    if text.count("?") >= 3 and years >= 2:
+        return True
+    return years >= 4 and len(_DIRECTIVE.findall(text)) >= 3
+
+
 def good_chunk(text: str) -> bool:
     """Reject garbled table text, symbol debris and very short chunks."""
     words = text.split()
@@ -160,12 +224,75 @@ def _shingles(text: str) -> set[int]:
 
 # ----------------------------------------------------------- build
 
+FFFD_LIMIT = 20          # this many U+FFFD characters in a file = broken text layer for pypdf
+
+
+def _fffd(raw_pages: list[str]) -> int:
+    return sum(t.count("\ufffd") for t in raw_pages)
+
+
+def _extract_pypdf(path: Path) -> list[str]:
+    from pypdf import PdfReader
+
+    out = []
+    for pg in PdfReader(str(path)).pages:
+        try:
+            out.append(pg.extract_text() or "")
+        except Exception:
+            out.append("")
+    return out
+
+
+def _extract_pymupdf(path: Path) -> list[str]:
+    import pymupdf
+
+    doc = pymupdf.open(str(path))
+    try:
+        return [pg.get_text() or "" for pg in doc]
+    finally:
+        doc.close()
+
+
+def _prepare(raw_pages: list[str]):
+    """raw page text -> (all chunks, chunks that pass the quality check)"""
+    rep = repeated_lines(raw_pages)
+    cleaned = [(i + 1, " ".join(clean_lines(raw, rep))) for i, raw in enumerate(raw_pages)]
+    chunks = chunk_pages(cleaned)
+    return chunks, [c for c in chunks if good_chunk(c[2])]
+
+
+def _extract_best(path: Path):
+    """pypdf first (keeps the cleaning rules tuned on it). If most of its chunks are rejected
+    (e.g. letters spaced apart, broken fonts), try PyMuPDF and keep whichever gives more good chunks.
+    Manifest key "extractor": "pypdf" | "pymupdf" | "auto" (default) overrides this."""
+    mode = (load_manifest().get(_key(path.stem)) or {}).get("extractor", "auto")
+    if mode == "pymupdf":
+        raw = _extract_pymupdf(path)
+        chunks, good = _prepare(raw)
+        return raw, chunks, "pymupdf"
+    raw = _extract_pypdf(path)
+    chunks, good = _prepare(raw)
+    broken = _fffd(raw)
+    if mode == "auto" and (len(good) < 0.6 * max(len(chunks), 1) or broken >= FFFD_LIMIT):
+        try:
+            raw2 = _extract_pymupdf(path)
+            chunks2, good2 = _prepare(raw2)
+            if len(good2) > len(good) or (_fffd(raw2) < broken and len(good2) >= 0.85 * len(good)):
+                return raw2, chunks2, "pymupdf"
+        except Exception as exc:
+            print(f"  (PyMuPDF fallback failed for {path.name}: {exc!r})", file=sys.stderr)
+    return raw, chunks, "pypdf"
+
+
 def _priority(path: Path) -> int:
+    m = load_manifest().get(_key(path.stem))
+    if m and "priority" in m:
+        return m["priority"]
     return FILE_PRIORITY.get(path.stem.lower(), 5)
 
 
-def build_chunks() -> tuple[list[dict], dict]:
-    from pypdf import PdfReader
+def build_chunks(verbose: bool = False) -> tuple[list[dict], dict]:
+    import time
 
     files = sorted(CORPUS_DIR.glob("*.pdf"), key=lambda p: (_priority(p), p.name))
     kept: list[dict] = []
@@ -174,20 +301,15 @@ def build_chunks() -> tuple[list[dict], dict]:
     stats: dict[str, dict] = {}
 
     for path in files:
-        reader = PdfReader(str(path))
-        raw_pages = []
-        for pg in reader.pages:
-            try:
-                raw_pages.append(pg.extract_text() or "")
-            except Exception:
-                raw_pages.append("")
+        t0 = time.time()
+        raw_pages, chunks, extractor = _extract_best(path)
 
-        rep = repeated_lines(raw_pages)
-        cleaned = [(i + 1, " ".join(clean_lines(raw, rep))) for i, raw in enumerate(raw_pages)]
-        chunks = chunk_pages(cleaned)
-
-        s = {"pages": len(raw_pages), "chunks": len(chunks), "bad_quality": 0, "duplicate": 0, "kept": 0}
+        s = {"pages": len(raw_pages), "chunks": len(chunks), "bad_quality": 0, "duplicate": 0, "kept": 0,
+             "extractor": extractor, "pyq": 0, "fffd": _fffd(raw_pages)}
         for p0, p1, text in chunks:
+            if is_question_list(text):
+                s["pyq"] += 1
+                continue
             if not good_chunk(text):
                 s["bad_quality"] += 1
                 continue
@@ -206,6 +328,9 @@ def build_chunks() -> tuple[list[dict], dict]:
                 inv[h].append(idx)
             s["kept"] += 1
         stats[path.name] = s
+        if verbose:
+            print(f"  {path.name:<44} {s['pages']:>5} pages -> kept {s['kept']:>5} chunks via {s['extractor']}, pyq {s['pyq']}, fffd {s['fffd']} ({time.time() - t0:.0f}s)",
+                  flush=True)
     return kept, stats
 
 
@@ -284,6 +409,7 @@ def is_near_duplicate(
 class BM25Index:
     def __init__(self, chunks: list[dict], k1: float = 1.5, b: float = 0.75):
         self.chunks, self.k1, self.b = chunks, k1, b
+        self.meta = [file_meta(c["file"]) for c in chunks]
         self.tf = [Counter(tokenize(c["text"])) for c in chunks]
         self.dl = [sum(t.values()) for t in self.tf]
         self.n = len(chunks)
@@ -296,8 +422,23 @@ class BM25Index:
         d = self.df.get(term, 0)
         return math.log(1 + (self.n - d + 0.5) / (d + 0.5))
 
+    def _allowed(self, papers, subjects) -> set[int] | None:
+        """Chunk ids that pass the paper/subject filter (None = no filter)."""
+        ps = {str(p).upper().replace("-", "").replace(" ", "") for p in (papers or [])}
+        ss = {str(x).lower() for x in (subjects or [])}
+        if not ps and not ss:
+            return None
+        ok = set()
+        for i, m in enumerate(self.meta):
+            if ps and not (ps & set(m["papers"])):
+                continue
+            if ss and m["subject"] not in ss:
+                continue
+            ok.add(i)
+        return ok
+
     def _rare_terms(self, q: set[str]) -> set[str]:
-        limit = max(3, int(self.n * RARE_DF_SHARE))
+        limit = max(3, min(int(self.n * RARE_DF_SHARE), RARE_DF_MAX))
         return {t for t in q if 0 < self.df.get(t, 0) <= limit}
 
     
@@ -307,6 +448,8 @@ class BM25Index:
         k: int = 3,
         candidate_k: int = 10,
         deduplicate: bool = True,
+        papers=None,
+        subjects=None,
     ) -> list[tuple[float, dict]]:
         q = set(tokenize(query))
 
@@ -318,8 +461,11 @@ class BM25Index:
         unknown = {t for t in q if self.df.get(t, 0) == 0}
 
         scored = []
+        allowed = self._allowed(papers, subjects)
 
         for i, tf in enumerate(self.tf):
+            if allowed is not None and i not in allowed:
+                continue
             matched = [t for t in q if t in tf]
 
             if len(matched) < 2 or len(matched) / len(q) < 0.5:
@@ -343,6 +489,7 @@ class BM25Index:
                     )
                 )
 
+            score *= KIND_WEIGHT.get(self.meta[i]["kind"], 1.0)
             scored.append((score, self.chunks[i]))
 
         scored.sort(key=lambda x: x[0], reverse=True)
@@ -377,19 +524,28 @@ class BM25Index:
 _index: BM25Index | None = None
 
 
-def search_corpus(query: str, k: int = 3, deduplicate: bool = True) -> list[dict]:
+def search_corpus(query: str, k: int = 3, deduplicate: bool = True,
+                  papers=None, subjects=None, fallback: bool = True) -> list[dict]:
+    """papers=['GS3'] / subjects=['economy'] restrict the search. With fallback=True, a filtered
+    search that finds nothing is repeated over the whole corpus (results then carry scope='all')."""
     global _index
     if _index is None:
         chunks = load_chunks() if list(CORPUS_DIR.glob("*.pdf")) else []
         _index = BM25Index(chunks)
-    return [
-        {
+    scope = "paper" if (papers or subjects) else "all"
+    hits = _index.search(query, k, deduplicate=deduplicate, papers=papers, subjects=subjects)
+    if not hits and scope == "paper" and fallback:
+        hits, scope = _index.search(query, k, deduplicate=deduplicate), "all"
+    out = []
+    for s, c in hits:
+        m = file_meta(c["file"])
+        out.append({
             "url": f"{c['file']} p.{c['page']}",
             "file": c["file"], "page": c["page"], "page_end": c.get("page_end", c["page"]),
             "text": c["text"], "tier": "notes", "score": round(s, 2),
-        }
-        for s, c in _index.search(query, k, deduplicate=deduplicate)
-    ]
+            "paper": m["papers"], "subject": m["subject"], "kind": m["kind"], "scope": scope,
+        })
+    return out
 
 # ----------------------------------------------------------- CLI
 
@@ -402,10 +558,13 @@ def main():
     ap.add_argument("--rebuild", action="store_true", help="rebuild the chunk cache and print stats")
     ap.add_argument("--sample", type=int, default=0, help="print N random chunks to eyeball")
     ap.add_argument("--search", default=None, help="run a test query")
+    ap.add_argument("--paper", default=None, help="restrict --search to GS1/GS2/GS3/GS4")
+    ap.add_argument("--file", default=None, help="restrict --sample to one PDF (part of its name)")
+    ap.add_argument("--stats", action="store_true", help="chunks per paper/subject/kind, untagged files")
     args = ap.parse_args()
 
     if args.rebuild:
-        chunks, stats = build_chunks()
+        chunks, stats = build_chunks(verbose=True)
         CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
         CACHE_FILE.write_text(
             json.dumps({"signature": _signature(), "chunks": chunks}, ensure_ascii=False),
@@ -413,18 +572,37 @@ def main():
         )
         for name, s in stats.items():
             print(f"{name:<40} pages={s['pages']:<4} chunks={s['chunks']:<4} "
-                  f"bad_quality={s['bad_quality']:<4} duplicate={s['duplicate']:<4} kept={s['kept']}")
+                  f"bad_quality={s['bad_quality']:<4} duplicate={s['duplicate']:<4} kept={s['kept']:<5} pyq={s['pyq']:<4} fffd={s['fffd']:<5} via={s['extractor']}")
         print(f"total kept: {len(chunks)}")
 
     if args.sample:
         chunks = load_chunks()
+        if args.file:
+            chunks = [c for c in chunks if args.file.lower() in c["file"].lower()]
         random.seed(1)
         for c in random.sample(chunks, min(args.sample, len(chunks))):
             print(f"\n--- {c['file']} p.{c['page']} ---\n{c['text'][:600]}")
 
+    if args.stats:
+        chunks = load_chunks()
+        by = Counter()
+        untagged = set()
+        for c in chunks:
+            m = file_meta(c["file"])
+            if not m["tagged"]:
+                untagged.add(c["file"])
+            by[(",".join(m["papers"]) or "-", m["subject"], m["kind"])] += 1
+        print(f"{'paper':<10}{'subject':<24}{'kind':<8}chunks")
+        for (pp, sj, kd), n in sorted(by.items()):
+            print(f"{pp:<10}{sj:<24}{kd:<8}{n}")
+        print(f"total chunks: {len(chunks)}")
+        if untagged:
+            print("UNTAGGED files (not searched when a paper filter is used):", ", ".join(sorted(untagged)))
+
     if args.search:
-        for r in search_corpus(args.search, k=3):
-            print(f"\n[{r['score']}] {r['url']}\n{r['text']}")
+        papers = [args.paper] if args.paper else None
+        for r in search_corpus(args.search, k=3, papers=papers):
+            print(f"\n[{r['score']}] {r['url']}  ({','.join(r['paper']) or '-'} / {r['subject']} / {r['kind']} / scope={r['scope']})\n{r['text']}")
 
 
 if __name__ == "__main__":

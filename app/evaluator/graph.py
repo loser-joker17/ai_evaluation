@@ -168,7 +168,7 @@ def evaluate_answer_node(state: EvaluatorState) -> dict:
 def fact_check_node(state: EvaluatorState) -> dict:
     """Never let a search failure break the evaluation."""
     try:
-        verifications, gaps = fact_check(state["answer"])
+        verifications, gaps = fact_check(state["answer"], subject=state.get("subject"))
     except Exception as exc:
         return {
             "claim_verifications": [],

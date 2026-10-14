@@ -1,0 +1,182 @@
+[
+  {
+    "id": "gs2_t1",
+    "paper": "GS Paper II",
+    "truth": "true",
+    "claim": "Articles 323A and 323B were inserted by the 42nd Constitutional Amendment Act, 1976."
+  },
+  {
+    "id": "gs2_t2",
+    "paper": "GS Paper II",
+    "truth": "true",
+    "claim": "The Tenth Schedule was inserted by the 52nd Constitutional Amendment."
+  },
+  {
+    "id": "gs2_t3",
+    "paper": "GS Paper II",
+    "truth": "true",
+    "claim": "The 91st Amendment Act, 2003 removed the one-third split provision of the Tenth Schedule."
+  },
+  {
+    "id": "gs2_t4",
+    "paper": "GS Paper II",
+    "truth": "true",
+    "claim": "The Women's Reservation Act, 2023 is the Constitution (106th Amendment) Act."
+  },
+  {
+    "id": "gs2_t5",
+    "paper": "GS Paper II",
+    "truth": "true",
+    "claim": "The 73rd Amendment reserved one-third of seats for women in Panchayati Raj institutions."
+  },
+  {
+    "id": "gs2_t6",
+    "paper": "GS Paper II",
+    "truth": "true",
+    "claim": "Article 32 gives the right to move the Supreme Court for enforcement of fundamental rights."
+  },
+  {
+    "id": "gs2_t7",
+    "paper": "GS Paper II",
+    "truth": "true",
+    "claim": "The Tribunal Reforms Act was enacted in 2021."
+  },
+  {
+    "id": "gs2_t8",
+    "paper": "GS Paper II",
+    "truth": "true",
+    "claim": "The Representation of the People Act was enacted in 1951."
+  },
+  {
+    "id": "gs2_f1",
+    "paper": "GS Paper II",
+    "truth": "false",
+    "claim": "The Sevottam model has five modules."
+  },
+  {
+    "id": "gs2_f2",
+    "paper": "GS Paper II",
+    "truth": "false",
+    "claim": "Article 21 guarantees the right to vote."
+  },
+  {
+    "id": "gs2_f3",
+    "paper": "GS Paper II",
+    "truth": "false",
+    "claim": "Tribunals are not bound by the procedures of BNS and BNSS."
+  },
+  {
+    "id": "gs2_t9",
+    "paper": "GS Paper II",
+    "truth": "true",
+    "claim": "Hussainara Khatoon v. State of Bihar was decided in 1979."
+  },
+  {
+    "id": "gs1_t1",
+    "paper": "GS Paper I",
+    "truth": "true",
+    "claim": "The Battle of Plassey was fought in 1757."
+  },
+  {
+    "id": "gs1_t2",
+    "paper": "GS Paper I",
+    "truth": "true",
+    "claim": "The Tropic of Cancer passes through eight Indian states."
+  },
+  {
+    "id": "gs1_t3",
+    "paper": "GS Paper I",
+    "truth": "true",
+    "claim": "Rajaraja I built the Brihadeeswara temple at Thanjavur."
+  },
+  {
+    "id": "gs1_f1",
+    "paper": "GS Paper I",
+    "truth": "false",
+    "claim": "The Battle of Buxar was fought in 1757."
+  },
+  {
+    "id": "gs1_f2",
+    "paper": "GS Paper I",
+    "truth": "false",
+    "claim": "The Tropic of Cancer passes through ten Indian states."
+  },
+  {
+    "id": "gs1_f3",
+    "paper": "GS Paper I",
+    "truth": "false",
+    "claim": "The Permanent Settlement was introduced by Lord Wellesley in 1793."
+  },
+  {
+    "id": "gs3_t1",
+    "paper": "GS Paper III",
+    "truth": "true",
+    "claim": "The Reserve Bank of India was established in 1935."
+  },
+  {
+    "id": "gs3_t2",
+    "paper": "GS Paper III",
+    "truth": "true",
+    "claim": "GST came into effect in India on 1 July 2017."
+  },
+  {
+    "id": "gs3_t3",
+    "paper": "GS Paper III",
+    "truth": "true",
+    "claim": "MGNREGA guarantees 100 days of wage employment per rural household in a year."
+  },
+  {
+    "id": "gs3_f1",
+    "paper": "GS Paper III",
+    "truth": "false",
+    "claim": "The Reserve Bank of India was established in 1949."
+  },
+  {
+    "id": "gs3_f2",
+    "paper": "GS Paper III",
+    "truth": "false",
+    "claim": "GST came into effect in India on 1 April 2017."
+  },
+  {
+    "id": "gs3_f3",
+    "paper": "GS Paper III",
+    "truth": "false",
+    "claim": "The repo rate is the rate at which commercial banks lend short-term funds to the RBI."
+  },
+  {
+    "id": "gs4_t1",
+    "paper": "GS Paper IV",
+    "truth": "true",
+    "claim": "Kohlberg proposed three levels of moral development."
+  },
+  {
+    "id": "gs4_t2",
+    "paper": "GS Paper IV",
+    "truth": "true",
+    "claim": "The Nolan Committee formulated seven principles of public life."
+  },
+  {
+    "id": "gs4_t3",
+    "paper": "GS Paper IV",
+    "truth": "true",
+    "claim": "The Second Administrative Reforms Commission's fourth report is titled Ethics in Governance."
+  },
+  {
+    "id": "gs4_f1",
+    "paper": "GS Paper IV",
+    "truth": "false",
+    "claim": "Kohlberg proposed five levels of moral development."
+  },
+  {
+    "id": "gs4_f2",
+    "paper": "GS Paper IV",
+    "truth": "false",
+    "claim": "The Nolan Committee formulated twelve principles of public life."
+  },
+  {
+    "id": "gs4_f3",
+    "paper": "GS Paper IV",
+    "truth": "false",
+    "claim": "Emotional intelligence was first proposed by Kohlberg."
+  }
+]

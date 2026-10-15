@@ -76,7 +76,29 @@ def build_state(case, graph_mod):
 
 def case_input(case):
     # same shape evaluate_submission() starts from; adjust here if your initial state differs
-    return {k: case[k] for k in INPUT_KEYS}
+    inp = {k: case[k] for k in INPUT_KEYS}
+    # 15-mark cases are stored scaled to /10 in the goldens. The evaluator must still see
+    # the real question (15 marks, 250 words), so pass the original marks; the report
+    # scales the result back to /10 (see to_ten).
+    if case.get("original_max_marks"):
+        inp["max_marks"] = case["original_max_marks"]
+    return inp
+
+
+def to_ten(case, value):
+    """Put an evaluator total on the same /10 scale as examiner_marks."""
+    orig = case.get("original_max_marks")
+    if value is None or not orig:
+        return value
+    return round(value * 10 / orig, 2)
+
+
+def check_case(case):
+    """Warn about golden entries the evaluator would misread."""
+    orig = case.get("original_max_marks") or case.get("max_marks")
+    want = {10: 150, 15: 250}.get(orig)
+    if want and case.get("word_limit") != want:
+        print(f"[warn] {case['id']}: {orig} marks but word_limit={case.get('word_limit')} (expected {want})")
 
 
 def get_state(case, graph_mod, rebuild):
@@ -213,7 +235,7 @@ def report(cases, saved, show_text):
     rows = []
     for c in cases:
         runs = saved.get(c["id"], {}).get("runs", [])
-        finals = [r["final_total"] for r in runs if r.get("final_total") is not None]
+        finals = [to_ten(c, r["final_total"]) for r in runs if r.get("final_total") is not None]
         if not finals:
             continue
         rows.append({"case": c, "runs": runs, "finals": finals, "med": statistics.median(finals)})
@@ -279,6 +301,8 @@ def main():
         cases = [c for c in cases if bool(c.get("heldout")) == want_held]
     if not cases:
         raise SystemExit("No cases selected.")
+    for c in cases:
+        check_case(c)
 
     saved = load_json(RESULTS, {})
     if args.fresh:

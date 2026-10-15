@@ -28,7 +28,8 @@ MIN_CONCERN_CLAIM_WORDS = 4
 
 # Strictness knobs ---------------------------------------------------------
 # Level 5 is deliberately not 100%: an AI estimate should not claim perfection.
-LEVEL_TO_FRACTION = {0: 0.0, 1: 0.12, 2: 0.25, 3: 0.45, 4: 0.65, 5: 0.85}
+# LEVEL_TO_FRACTION = {0: 0.0, 1: 0.12, 2: 0.25, 3: 0.45, 4: 0.65, 5: 0.85}
+LEVEL_TO_FRACTION = {0: 0.0, 1: 0.12, 2: 0.30, 3: 0.45, 4: 0.55, 5: 0.65}
 
 # No automated total may exceed this share of the maximum marks.
 MAX_FRACTION_OF_MARKS = 0.75
@@ -473,12 +474,14 @@ def finalize_scores(
 
         # 3. If a cap applies, use its wording instead of the judge's text,
         #    which may contradict the verified facts (e.g. "has a conclusion").
-        if cap_note:
-            if level < raw_level:
-                justification = f"Level lowered from {raw_level} to {level}: {cap_note}"
-            else:
-                justification = f"Limited by: {cap_note}"
+        if cap_note and level < raw_level:
+            justification = f"Level lowered from {raw_level} to {level}: {cap_note}"
             improvement = cap_note
+        elif cap_note:
+            # The judge was already at or below the cap: keep its specific reasoning
+            # and add the cap note, instead of replacing the feedback with a generic line.
+            justification = f"{item.get('justification', '')} (Also: {cap_note})".strip()
+            improvement = item.get("improvement", "") or cap_note
         else:
             justification = item.get("justification", "")
             improvement = item.get("improvement", "")
@@ -552,17 +555,8 @@ def validate_scores(
 
 # ------------------------------------------------------------------ rounding
 
-def round_marks(total: float, max_marks: int) -> float:
-    """f >= 0.8 -> next whole; 0.5 <= f < 0.8 -> .5; below 0.5 -> whole."""
+def round_marks(total: float, max_marks: int, step: float = 0.25) -> float:
+    """Round to the nearest quarter mark (step=0.25) or half mark (step=0.5)."""
     total = round(total, 2)
-    whole = math.floor(total)
-    frac = round(total - whole, 2)
-
-    if frac >= 0.8:
-        result = whole + 1.0
-    elif frac >= 0.5:
-        result = whole + 0.5
-    else:
-        result = float(whole)
-
+    result = math.floor(total / step + 0.5) * step
     return min(result, float(max_marks))

@@ -53,8 +53,8 @@ def finalize(items, max_marks=10, status="within_limit", answer=ANSWER):
 # ---------------------------------------------------------- rounding
 
 @pytest.mark.parametrize("raw_total,expected", [
-    (3.7, 3.5), (3.8, 4.0), (3.3, 3.0), (3.5, 3.5),
-    (3.79, 3.5), (0.0, 0.0), (9.9, 10.0),
+    (3.7, 3.75), (3.8, 3.75), (3.3, 3.25), (3.5, 3.5),
+    (3.79, 3.75), (3.62, 3.5), (3.63, 3.75), (0.0, 0.0), (9.9, 10.0),
 ])
 def test_round_marks(raw_total, expected):
     assert round_marks(raw_total, 10) == expected
@@ -233,3 +233,15 @@ def test_analysis_expectation():
     assert analysis_expectation("Discuss") == "balanced"
     assert analysis_expectation("") == "balanced"
     assert analysis_expectation(None) == "balanced"
+
+
+def test_cap_keeps_judge_feedback_when_not_binding():
+    # Judge already below the coverage cap: its own reasoning must survive.
+    low = finalize(raw(2, improvement="Name the specific reforms."), status="under_limit")
+    cov = low["coverage_balance"]
+    assert cov["final_level"] == 2
+    assert cov["justification"].startswith("reason") and "Also:" in cov["justification"]
+    assert cov["improvement"] == "Name the specific reforms."
+    # Judge above the cap: the cap text explains the lowered level.
+    high = finalize(raw(4), status="under_limit")["coverage_balance"]
+    assert high["final_level"] == 3 and high["justification"].startswith("Level lowered from 4 to 3")

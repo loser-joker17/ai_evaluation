@@ -66,6 +66,9 @@ class RawAnswerFeatures(BaseModel):
     mechanisms_explained: int = Field(ge=0)
     dimensions_covered: list[str] = Field(default_factory=list)
     addresses_all_question_parts: bool
+    # One label per numbered block of the answer: "P1", "P2", ... (the question
+    # part it answers), "intro", "conclusion", "wayforward" or "other".
+    block_labels: list[str] = Field(default_factory=list)
 
 
 class AnswerFeatures(BaseModel):
@@ -81,6 +84,11 @@ class AnswerFeatures(BaseModel):
     mechanisms_explained: int = Field(ge=0)
     dimensions_covered: list[str] = Field(default_factory=list)
     addresses_all_question_parts: bool
+    # Measured in code from block_labels (None when not measurable).
+    specifics_per_100_words: float | None = None
+    part_word_share: list[dict] = Field(default_factory=list)   # [{"part": str, "share": float}]
+    unasked_share: float | None = None
+    parts_in_order: bool | None = None
     feature_notes: list[str] = Field(default_factory=list)
 
 

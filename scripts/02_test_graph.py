@@ -487,7 +487,7 @@ test_input_9 = { #multipolar
 
 if __name__ == "__main__":
     try:
-        result = evaluate_submission(test_input_3)
+        result = evaluate_submission(test_input_8)
 
         print("\n========== EVALUATION RESULT ==========\n")
         print(json.dumps(result, indent=2, ensure_ascii=False))

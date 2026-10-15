@@ -178,5 +178,41 @@
     "paper": "GS Paper IV",
     "truth": "false",
     "claim": "Emotional intelligence was first proposed by Kohlberg."
+  },
+  {
+    "id": "gs3_t4",
+    "paper": "GS Paper III",
+    "truth": "true",
+    "claim": "The corporate tax rate for new domestic manufacturing companies was reduced to 15% in 2019."
+  },
+  {
+    "id": "gs3_t5",
+    "paper": "GS Paper III",
+    "truth": "true",
+    "claim": "The Insolvency and Bankruptcy Code was enacted in 2016."
+  },
+  {
+    "id": "gs3_t6",
+    "paper": "GS Paper III",
+    "truth": "true",
+    "claim": "The Direct Tax Vivad se Vishwas scheme was introduced to settle pending direct tax disputes."
+  },
+  {
+    "id": "gs3_f4",
+    "paper": "GS Paper III",
+    "truth": "false",
+    "claim": "The corporate tax rate for existing domestic companies was reduced to 25% in 2019."
+  },
+  {
+    "id": "gs3_f5",
+    "paper": "GS Paper III",
+    "truth": "false",
+    "claim": "The Global Hunger Index is published by the World Economic Forum."
+  },
+  {
+    "id": "gs3_f6",
+    "paper": "GS Paper III",
+    "truth": "false",
+    "claim": "The Production Linked Incentive scheme was first launched in 2010 for the mobile manufacturing sector."
   }
 ]

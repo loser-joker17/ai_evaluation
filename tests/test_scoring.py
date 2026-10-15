@@ -245,3 +245,44 @@ def test_cap_keeps_judge_feedback_when_not_binding():
     # Judge above the cap: the cap text explains the lowered level.
     high = finalize(raw(4), status="under_limit")["coverage_balance"]
     assert high["final_level"] == 3 and high["justification"].startswith("Level lowered from 4 to 3")
+
+# ------------------------------------------------- length and allocation
+
+def test_required_mechanisms_scale_with_word_limit():
+    from app.evaluator.scoring import required_mechanisms
+    assert required_mechanisms(None) == 2
+    assert required_mechanisms(150) == 2
+    assert required_mechanisms(250) == 3
+    caps = compute_caps({"has_conclusion": True, "mechanisms_explained": 2}, 240, 250, "within_limit")
+    assert caps["analysis_depth"][0] == 3 and "250-word" in caps["analysis_depth"][1]
+    assert "analysis_depth" not in compute_caps(
+        {"has_conclusion": True, "mechanisms_explained": 2}, 140, 150, "within_limit")
+
+
+def test_compute_allocation_shares_and_order():
+    from app.evaluator.features import compute_allocation
+    blocks = ["Intro line here.", "need " * 40, "bottleneck " * 30, "law " * 30, "Thus done."]
+    labels = ["intro", "other", "P1", "P2", "conclusion"]
+    a = compute_allocation(blocks, labels, ["bottlenecks", "legislations"])
+    assert a["unasked_share"] == 0.4 and a["parts_in_order"] is True
+    assert [p["share"] for p in a["part_word_share"]] == [0.3, 0.3]
+    b = compute_allocation(blocks, ["intro", "other", "P2", "P1", "conclusion"], ["x", "y"])
+    assert b["parts_in_order"] is False
+    bad = compute_allocation(blocks, ["intro", "P1"], ["x", "y"])
+    assert bad["part_word_share"] == [] and "not measured" in bad["note"]
+    assert compute_allocation(blocks, ["intro", "P9", "P1", "P2", "conclusion"], ["x", "y"])["note"]
+
+
+def test_allocation_caps():
+    from app.evaluator.scoring import allocation_caps
+    ok = {"part_word_share": [{"part": "a", "share": 0.5}, {"part": "b", "share": 0.45}],
+          "unasked_share": 0.05, "parts_in_order": True}
+    assert allocation_caps(ok) == {}
+    thin = {**ok, "part_word_share": [{"part": "a", "share": 0.85}, {"part": "b", "share": 0.15}]}
+    assert allocation_caps(thin)["relevance"][0] == 3
+    unasked = {**ok, "unasked_share": 0.38}
+    assert "did not ask" in allocation_caps(unasked)["relevance"][1]
+    order = {**ok, "parts_in_order": False}
+    assert allocation_caps(order)["structure_presentation"][0] == 3
+    # Old cached features without allocation fields: no caps.
+    assert allocation_caps({"has_conclusion": True}) == {}

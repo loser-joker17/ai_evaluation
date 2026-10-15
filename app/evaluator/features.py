@@ -101,10 +101,75 @@ def verify_conclusion(quote, sentences):
     return True, ok, None
 
 
+# --------------------------------------------------- allocation (parts)
+
+BLOCK_LABELS_FIXED = ("intro", "conclusion", "wayforward", "other")
+
+
+def split_blocks(answer: str) -> list[str]:
+    """Lines of the answer; one block per non-empty line. A single-paragraph
+    answer falls back to sentences so the labels still mean something."""
+    lines = [l.strip() for l in answer.splitlines() if l.strip()]
+    if len(lines) >= 3:
+        return lines
+    return split_sentences(answer)
+
+
+def _word_count(text: str) -> int:
+    return len(text.split())
+
+
+def compute_allocation(blocks: list[str], labels: list[str], parts: list[str]) -> dict:
+    """Share of the answer body spent on each question part, the share spent on
+    things not asked, and whether the parts come in the asked order.
+
+    Body = everything except intro, conclusion and way-forward text. Returns
+    empty values (and a note) when the labels cannot be trusted."""
+    empty = {"part_word_share": [], "unasked_share": None, "parts_in_order": None}
+    n = len(parts)
+    if n == 0 or not labels:
+        return {**empty, "note": None}
+    if len(labels) != len(blocks):
+        return {**empty, "note": (f"Allocation not measured: {len(labels)} labels for "
+                                  f"{len(blocks)} blocks.")}
+
+    valid = {f"P{i}" for i in range(1, n + 1)} | set(BLOCK_LABELS_FIXED)
+    labels = [l.strip() for l in labels]
+    if any(l not in valid for l in labels):
+        return {**empty, "note": "Allocation not measured: unexpected block labels."}
+
+    words: dict[str, int] = {}
+    for block, label in zip(blocks, labels):
+        words[label] = words.get(label, 0) + _word_count(block)
+    body = sum(w for l, w in words.items() if l.startswith("P") or l == "other")
+    if body == 0:
+        return {**empty, "note": "Allocation not measured: no body text labelled."}
+
+    shares = [{"part": parts[i - 1], "share": round(words.get(f"P{i}", 0) / body, 3)}
+              for i in range(1, n + 1)]
+
+    first_seen: list[int] = []
+    for l in labels:
+        if l.startswith("P") and int(l[1:]) not in first_seen:
+            first_seen.append(int(l[1:]))
+    in_order = first_seen == sorted(first_seen) if n >= 2 else None
+
+    return {
+        "part_word_share": shares if n >= 2 else [],
+        "unasked_share": round(words.get("other", 0) / body, 3),
+        "parts_in_order": in_order,
+        "note": None,
+    }
+
+
 # ------------------------------------------------------------- main
 
 def extract_features(question: str, answer: str, question_analysis: dict) -> dict:
     structured_llm = llm.with_structured_output(RawAnswerFeatures)
+    parts = list(question_analysis.get("question_parts", []) or [])
+    blocks = split_blocks(answer)
+    numbered_parts = "\n".join(f"P{i}: {p}" for i, p in enumerate(parts, 1)) or "(none)"
+    numbered_blocks = "\n".join(f"[B{i}] {b}" for i, b in enumerate(blocks, 1))
 
     prompt = f"""
 You are a fact extractor for UPSC answers. You do NOT score or judge quality.
@@ -113,10 +178,13 @@ QUESTION:
 {question}
 
 QUESTION PARTS:
-{question_analysis.get("question_parts", [])}
+{numbered_parts}
 
 ANSWER:
 {answer}
+
+THE SAME ANSWER SPLIT INTO NUMBERED BLOCKS:
+{numbered_blocks}
 
 Extract the following from the ANSWER only:
 
@@ -138,6 +206,19 @@ Extract the following from the ANSWER only:
 - dimensions_covered: social, economic, political, legal, ethical, etc.,
   that the answer actually touches.
 - addresses_all_question_parts: true only if every question part is touched.
+- block_labels: exactly one label per numbered block, in order ({len(blocks)}
+  labels in total). Use:
+    "P1", "P2", ... the question part the block mainly answers. A heading
+      gets the label of the section it introduces.
+    "intro"       opening framing (definition, context, data hook).
+    "conclusion"  closing summary or judgement.
+    "wayforward"  suggestions or way forward, when the question did not ask
+                  for them as a part.
+    "other"       anything that answers none of the question parts, e.g. a
+                  long background, a "need for X" section the question did
+                  not ask for, or points about a different topic.
+  If a question part asks for suggestions or measures, label those blocks
+  with that part, not "wayforward".
 
 RULES:
 1. List only items that literally appear in the answer. Do not infer.
@@ -186,8 +267,20 @@ Return only the structured RawAnswerFeatures response.
         "mechanisms_explained": raw.get("mechanisms_explained", 0),
         "dimensions_covered": raw.get("dimensions_covered", []),
         "addresses_all_question_parts": raw.get("addresses_all_question_parts", False),
-        "feature_notes": notes,
     }
+
+    n_specifics = (len(features["constitutional_or_legal_refs"])
+                   + len(features["schemes_policies_committees"])
+                   + len(features["examples_or_data"]))
+    n_words = _word_count(answer)
+    features["specifics_per_100_words"] = round(100 * n_specifics / n_words, 1) if n_words else None
+
+    alloc = compute_allocation(blocks, raw.get("block_labels", []), parts)
+    alloc_note = alloc.pop("note")
+    if alloc_note:
+        notes.append(alloc_note)
+    features.update(alloc)
+    features["feature_notes"] = notes
 
     # Validate the final shape.
     return AnswerFeatures(**features).model_dump()

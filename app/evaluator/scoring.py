@@ -25,6 +25,13 @@ MIN_QUOTE_WORDS = 8
 MAX_QUOTE_WORDS = 40
 MIN_CONCERN_CLAIM_WORDS = 4
 
+# Allocation over question parts (measured in features.py).
+# An asked part with less than this fraction of its fair share of the body is
+# "brief treatment" (0.4 x 50% = 20% for a two-part question).
+MIN_PART_SHARE_FACTOR = 0.4
+# Share of the body spent on things the question did not ask for.
+MAX_UNASKED_SHARE = 0.30
+
 
 # Strictness knobs ---------------------------------------------------------
 # Level 5 is deliberately not 100%: an AI estimate should not claim perfection.
@@ -164,6 +171,19 @@ GENERAL SCORING PRINCIPLES
 - Distinguish missing coverage from irrelevant content.
 - Use detected features as supporting evidence, not infallible ground truth.
 
+STANDARD RELATIVE TO LENGTH
+- Every level is relative to the marks and word limit. A 15-mark / 250-word
+  answer has room for about 1.5 times the content of a 10-mark / 150-word
+  answer, so it needs proportionally more specifics, explained points and
+  coverage to reach the SAME level.
+- Never raise a level because a longer answer contains more points in absolute
+  terms. Judge how well the available words are used: how many specifics and
+  explained points per 100 words, compared with what the word limit allows.
+  DETECTED FEATURES gives specifics_per_100_words and, when available, the
+  share of the answer spent on each question part.
+- An answer that is only "good for a short answer" is not level 4 or 5 when
+  the word limit is 250 words.
+
 DIMENSION BOUNDARIES (each dimension judges ONE thing)
 - Something missing from the answer (a fact, event, aspect or example) can
   lower coverage_balance ONLY. Never lower relevance, content_substantiation
@@ -188,6 +208,11 @@ relevance
   0 is essentially off topic
   An answer whose points respond to the directive and the demand is at least
   level 3 even if it omits some aspects; omissions belong in coverage_balance.
+  Relevance also judges WHERE the words go. Level 4 or 5 requires the answer to
+  spend its space on what the question asks, roughly in proportion to its
+  demands. If an explicitly asked part gets only brief treatment while a
+  section the question did not ask for (or asked only as context, e.g. "need
+  for X" or a long background) takes substantial space, relevance is at most 3.
 
 content_substantiation (accuracy and specificity)
   5 uses multiple accurate, relevant specifics that substantiate its arguments
@@ -224,6 +249,10 @@ structure_presentation
   2 has weak framing or poorly connected points
   1 is difficult to follow
   0 is incoherent or unreadable
+  Level 4 or 5 requires the body to follow the order of the question's
+  demands (e.g. "enumerate bottlenecks, then discuss how legislations help"
+  means bottlenecks first). If the sections are out of that order, structure
+  is at most 3.
 
 EVIDENCE RULES
 - Every evidence_from_answer item must be an exact quote from the candidate's
@@ -241,6 +270,11 @@ CALIBRATION
 - Do not lower relevance simply because an answer lacks breadth.
 - Do not lower coverage simply because an answer lacks detailed analysis.
 - Do not penalise a missing conclusion in both analysis depth and relevance.
+- Act on what you write. If your own justification for content_substantiation
+  names a factual error (a wrong figure, rate, name or attribution), that level
+  is at most 3. If the question explicitly asks the answer to name, list or
+  highlight something and your coverage_balance justification says it was not
+  done, coverage_balance is at most 3.
 
 FACTUAL CONCERNS
 - Separately from the levels, list claims in the CANDIDATE ANSWER that you
@@ -304,13 +338,68 @@ def compute_caps(
             f"Answer uses {word_count} of the {word_limit} words ({pct}%).",
         )
 
-    # Analysis: fewer than 2 explained mechanisms means mostly assertions
-    if features.get("mechanisms_explained", 2) < 2:
+    # Analysis: too few explained mechanisms for the length means mostly assertions.
+    # 2 for a 150-word answer, scaled with the word limit (3 for 250 words).
+    needed = required_mechanisms(word_limit)
+    found = features.get("mechanisms_explained", needed)
+    if found < needed:
         caps["analysis_depth"] = (
             3,
-            "Few causal explanations (how or why) are given; most points are assertions.",
+            "Few causal explanations (how or why) are given; most points are assertions."
+            if not word_limit or word_limit <= 150 else
+            f"Only {found} causal explanation(s) (how or why) for a {word_limit}-word "
+            f"answer; at least {needed} are expected. Most points are assertions.",
         )
 
+    # Relevance / structure: how the words are spread over the question's parts.
+    alloc = allocation_caps(features)
+    for dim, cap in alloc.items():
+        if dim in caps:
+            caps[dim] = (min(caps[dim][0], cap[0]), f"{caps[dim][1]} {cap[1]}")
+        else:
+            caps[dim] = cap
+
+    return caps
+
+
+def required_mechanisms(word_limit: int | None) -> int:
+    if not word_limit:
+        return 2
+    return max(2, round(2 * word_limit / 150))
+
+
+def allocation_caps(features: dict) -> dict[str, tuple[int, str]]:
+    """Caps from the measured share of the answer body spent on each question part.
+
+    Only applies when the feature step produced a valid allocation for a question
+    with two or more parts. Intro, conclusion and way-forward text are excluded
+    from the body."""
+    caps: dict[str, tuple[int, str]] = {}
+    shares = features.get("part_word_share") or []
+    if len(shares) < 2:
+        return caps
+
+    fair = 1 / len(shares)
+    reasons = []
+    for p in shares:
+        if p["share"] < MIN_PART_SHARE_FACTOR * fair:
+            reasons.append(
+                f"The asked part \"{p['part'][:60]}\" gets only {round(100 * p['share'])}% "
+                f"of the answer's body."
+            )
+    unasked = features.get("unasked_share") or 0.0
+    if unasked > MAX_UNASKED_SHARE:
+        reasons.append(
+            f"About {round(100 * unasked)}% of the answer's body answers something the "
+            f"question did not ask (background, need, general context)."
+        )
+    if reasons:
+        caps["relevance"] = (3, " ".join(reasons))
+
+    if features.get("parts_in_order") is False:
+        caps["structure_presentation"] = (
+            3, "The answer does not take up the question's parts in the order they are asked."
+        )
     return caps
 # ------------------------------------------------- judge audit (LLM mistakes)
 

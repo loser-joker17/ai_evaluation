@@ -26,6 +26,14 @@ TRUSTED_DOMAINS = [
     "eci.gov.in",
     "loksabha.nic.in",
     "rajyasabha.nic.in",
+    # GS-3 (economy, budget, statistics, science)
+    "incometaxindia.gov.in",
+    "indiabudget.gov.in",
+    "rbi.org.in",
+    "mospi.gov.in",
+    "dea.gov.in",
+    "niti.gov.in",
+    "isro.gov.in",
 ]
 
 MAX_CLAIMS = 5
@@ -181,7 +189,11 @@ RULES:
 - "supported" or "contradicted" requires an exact quote copied from a source.
 - If the sources do not address this specific claim, or you are unsure,
   answer "unverifiable".
-- A claim that is partly right but imprecise is "unverifiable", not "contradicted".
+- A claim that is partly right but imprecise (rounded, approximate, loosely
+  worded) is "unverifiable", not "contradicted".
+- Exception: a specific number, rate, year, name or attribution that a source
+  states differently IS "contradicted", even if the rest of the claim is right
+  (e.g. claim "corporate tax cut to 25%", source "reduced to 22%").
 - "contradicted" only if a source directly states something incompatible.
 - Study notes can be simplified or wrong, so prefer an official source for
   any contradiction.

@@ -39,22 +39,24 @@ MAX_UNASKED_SHARE = 0.30
 
 # Strictness knobs ---------------------------------------------------------
 # Level 5 is deliberately not 100%: an AI estimate should not claim perfection.
-# LEVEL_TO_FRACTION = {0: 0.0, 1: 0.12, 2: 0.25, 3: 0.45, 4: 0.65, 5: 0.85}
+# Shared table: 20-mark answers (GS-4 case studies).
 LEVEL_TO_FRACTION = {0: 0.0, 1: 0.12, 2: 0.30, 3: 0.45, 4: 0.55, 5: 0.65}
-# Long answers (15 marks / 250 words). The judge rates long answers about one
-# level higher than examiners do, because they contain more points in absolute
-# terms. Levels 3-5 are therefore worth less; levels 0-2 are unchanged so weak
-# long answers are not punished twice. Set from real UPSC ranges (a good 15-mark
-# answer earns 6-8), checked against the Vision IAS GS-3 sheet. Revisit when
-# 15-mark answers from a second institute are available.
+# 15 marks / 250 words.
 LEVEL_TO_FRACTION_LONG = {0: 0.0, 1: 0.12, 2: 0.30, 3: 0.40, 4: 0.48, 5: 0.55}
 LONG_ANSWER_MIN_MARKS = 15
+# 10 marks / 150 words: examiners' range is narrow (3.5-5/10). Tuned with
+# scripts/tune_short_table.py; re-tune whenever the judge model changes.
+LEVEL_TO_FRACTION_SHORT = {0: 0.0, 1: 0.24, 2: 0.36, 3: 0.42, 4: 0.46, 5: 0.51}
+SHORT_ANSWER_MARKS = 10
 
 
 def level_fraction(level: int, max_marks: float) -> float:
     """Share of a dimension's marks earned at this level, by question size."""
-    table = LEVEL_TO_FRACTION_LONG if max_marks == LONG_ANSWER_MIN_MARKS else LEVEL_TO_FRACTION
-    return table[level]
+    if max_marks == LONG_ANSWER_MIN_MARKS:
+        return LEVEL_TO_FRACTION_LONG[level]
+    if max_marks == SHORT_ANSWER_MARKS:
+        return LEVEL_TO_FRACTION_SHORT[level]
+    return LEVEL_TO_FRACTION[level]
 
 # No automated total may exceed this share of the maximum marks.
 MAX_FRACTION_OF_MARKS = 0.75
@@ -182,7 +184,7 @@ def score_answer(
     question_analysis: dict,
     features: dict,
 ) -> dict:
-    structured_llm = llm.with_structured_output(DimensionScoresResponse)
+    structured_llm = judge_llm.with_structured_output(DimensionScoresResponse)
 
     directive = question_analysis.get("directive", "") if isinstance(question_analysis, dict) else ""
     analysis_levels = ANALYSIS_LEVELS[directive_type(directive, question)]

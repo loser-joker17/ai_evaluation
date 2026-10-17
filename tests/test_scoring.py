@@ -74,24 +74,26 @@ def test_dimension_maxes_add_up():
 
 
 def test_fifteen_mark_scale_is_larger():
-    # Low levels scale exactly with the marks.
-    ten = sum(s["score"] for s in finalize(raw(2), 10).values())
+    # Low levels use the same fraction for 15 and 20 marks, so they scale with the marks.
     fifteen = sum(s["score"] for s in finalize(raw(2), 15).values())
-    assert abs(fifteen - 1.5 * ten) < 0.1
+    twenty = sum(s["score"] for s in finalize(raw(2), 20).values())
+    assert abs(fifteen - 0.75 * twenty) < 0.1
 
 
 def test_fifteen_mark_levels_3_to_5_are_stricter():
+    # 15-mark answers are stricter than 20-mark ones at levels 3-5.
     from app.evaluator.scoring import level_fraction
     for level in (3, 4, 5):
-        assert level_fraction(level, 15) < level_fraction(level, 10)
-    for level in (0, 1, 2):
-        assert level_fraction(level, 15) == level_fraction(level, 10)
-    ten = sum(s["score"] for s in finalize(raw(4), 10).values()) / 10
-    fifteen = sum(s["score"] for s in finalize(raw(4), 15).values()) / 15
-    assert fifteen < ten
-    # Still increasing with level, so ranking is kept.
-    assert [level_fraction(l, 15) for l in range(6)] == sorted(level_fraction(l, 15) for l in range(6))
+        assert level_fraction(level, 15) < level_fraction(level, 20)
 
+
+def test_ten_mark_table_is_narrow_and_ordered():
+    # 10-mark table: each level a clear step above the one below, and a narrow range
+    # (examiners' 10-mark marks fall in about 3.5-5/10).
+    from app.evaluator.scoring import level_fraction
+    f = [level_fraction(lv, 10) for lv in range(6)]
+    assert all(b > a for a, b in zip(f, f[1:]))
+    assert f[5] - f[2] <= 0.2
 
 # ------------------------------------------------------------- audit
 

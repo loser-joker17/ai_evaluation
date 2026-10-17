@@ -135,7 +135,12 @@ def evaluate_answer_node(state: EvaluatorState) -> dict:
         word_limit_status=state["word_limit_status"],
         answer=state["answer"],
         factual_concerns=concerns,  
-        confirmed_errors=confirmed,           
+        confirmed_errors=confirmed,
+        directive=(state["question_analysis"].get("directive", "")
+                   if isinstance(state.get("question_analysis"), dict) else ""),
+        question=state["question"],
+        demands=result.get("demands"),
+        demand_check=result.get("demand_check"),
     )
 
     if build_issues:

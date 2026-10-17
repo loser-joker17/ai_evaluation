@@ -3,6 +3,10 @@ import math
 from app.llm import llm
 from app.llm import judge_llm
 from app.schemas import DimensionScoresResponse, EXPECTED_DIMENSIONS
+from app.evaluator.demands import (
+    directive_kind, directive_guide, build_demands, demand_block, demand_caps,
+    is_meta_part,
+)
 import re
 
 judge_llm.with_structured_output(DimensionScoresResponse)
@@ -37,6 +41,20 @@ MAX_UNASKED_SHARE = 0.30
 # Level 5 is deliberately not 100%: an AI estimate should not claim perfection.
 # LEVEL_TO_FRACTION = {0: 0.0, 1: 0.12, 2: 0.25, 3: 0.45, 4: 0.65, 5: 0.85}
 LEVEL_TO_FRACTION = {0: 0.0, 1: 0.12, 2: 0.30, 3: 0.45, 4: 0.55, 5: 0.65}
+# Long answers (15 marks / 250 words). The judge rates long answers about one
+# level higher than examiners do, because they contain more points in absolute
+# terms. Levels 3-5 are therefore worth less; levels 0-2 are unchanged so weak
+# long answers are not punished twice. Set from real UPSC ranges (a good 15-mark
+# answer earns 6-8), checked against the Vision IAS GS-3 sheet. Revisit when
+# 15-mark answers from a second institute are available.
+LEVEL_TO_FRACTION_LONG = {0: 0.0, 1: 0.12, 2: 0.30, 3: 0.40, 4: 0.48, 5: 0.55}
+LONG_ANSWER_MIN_MARKS = 15
+
+
+def level_fraction(level: int, max_marks: float) -> float:
+    """Share of a dimension's marks earned at this level, by question size."""
+    table = LEVEL_TO_FRACTION_LONG if max_marks == LONG_ANSWER_MIN_MARKS else LEVEL_TO_FRACTION
+    return table[level]
 
 # No automated total may exceed this share of the maximum marks.
 MAX_FRACTION_OF_MARKS = 0.75
@@ -61,60 +79,94 @@ def dimension_max(dimension: str, max_marks: int) -> float:
 
 
 # ------------------------------------------------ analysis_depth by directive
-# "Describe / elaborate / identify" questions ask for specific, well-illustrated
-# points. "Critically examine / analyse" questions ask for explained mechanisms.
-# Everything else (discuss, comment, examine, explain, ...) sits in between.
-_DESCRIPTIVE_DIRECTIVES = (
-    "describe", "elaborate", "enumerate", "identify", "outline", "list",
-    "state", "mention", "highlight", "illustrate", "trace",
-)
-_ANALYTICAL_DIRECTIVES = (
-    "critically", "analyse", "analyze", "evaluate", "assess", "justify",
-    "to what extent", "how far", "do you agree",
-)
+# What "analysis" means depends on what the question asks:
+#   analytical  analyse / critically analyse: break the issue into parts and explain
+#               how they connect (causes, effects, trade-offs).
+#   judgement   to what extent / how far / do you agree / in your opinion / justify /
+#               assess / evaluate / critically examine: specific points on the relevant
+#               sides and a reasoned verdict. A how/why for every point is NOT required.
+#   descriptive describe / elaborate / identify / highlight / trace: specific,
+#               well-illustrated points.
+#   balanced    discuss / examine / explain / comment and everything else.
+# Order matters: "critically analyse" is analytical, "critically examine" is judgement.
+# Directive words and what they demand live in app/evaluator/demands.py (DIRECTIVES).
+
+# Shared by every level table: what counts as a specific (not "bare") point.
+_SPECIFIC_POINT_NOTE = """  A point that names a specific concept, institution, provision, scheme,
+  fact, figure or example is a specific point even without a why-sentence. A
+  comparison table with specific parameters counts as specific points. Level 2
+  and below are for vague, generic claims, not for crisp specific points."""
 
 ANALYSIS_LEVELS = {
     "analytical": """  5 explains causal mechanisms, examines implications or trade-offs,
     and develops a reasoned argument
   4 explains the reasoning behind most major points
-  3 explains some points but is mostly descriptive
-  2 offers limited explanation
-  1 mainly lists assertions without explaining them
-  0 provides no meaningful analysis""",
+  3 explains some points; the rest are specific but unexplained
+  2 is mostly vague, generic points with little explanation
+  1 mainly lists generic assertions without explaining them
+  0 provides no meaningful analysis
+  This question asks the candidate to analyse, so explaining how and why
+  matters here.
+""" + _SPECIFIC_POINT_NOTE,
+    "judgement": """  5 weighs specific points on the relevant sides (e.g. achievements and
+    shortfalls, for and against) across several dimensions and reaches a clear,
+    reasoned verdict on the extent or view asked
+  4 gives specific points on the relevant sides and a verdict, with minor gaps
+  3 gives specific points but mostly on one side, OR covers the sides without
+    a clear verdict
+  2 is a one-sided list of mostly generic points with no verdict
+  1 is only generic assertions with no specifics
+  0 provides no meaningful analysis
+  This question asks for a judgement ("to what extent", "do you agree",
+  "assess", "evaluate"). It does NOT ask for a how/why explanation of every
+  point: a specific factor, fact, example or institution is enough support for
+  a point. Do not lower this dimension for missing causal mechanisms, and do
+  not ask for them in the feedback.
+  A stance may be implied by the conclusion (a summing-up or a solution), and a
+  short "however / other factors" paragraph counts as the other side. Specific,
+  example-backed points on the asked side with an implied stance are level 3,
+  not lower. Never lower relevance because an explicit verdict sentence is missing.
+""" + _SPECIFIC_POINT_NOTE,
     "balanced": """  5 explains causal mechanisms, examines implications or trade-offs,
     and develops a reasoned argument
-  4 gives a reason, mechanism or consequence for most major points
+  4 gives a reason, mechanism, consequence or concrete example for most major points
   3 gives a reason, mechanism, consequence or concrete example for some
     points; the rest are specific but unexplained
-  2 is mostly bare points, with only occasional reasoning or examples
-  1 is only bare, generic labels with no reasons or examples
+  2 is mostly vague, generic points, with only occasional reasoning or examples
+  1 is only generic labels with no reasons or examples
   0 provides no meaningful analysis
   Short, point-style answers are acceptable when each point carries a reason,
-  mechanism, consequence or concrete example.""",
+  mechanism, consequence or concrete example.
+""" + _SPECIFIC_POINT_NOTE,
     "descriptive": """  5 nearly every point is specific and linked to the demand, with an example,
     data or brief reason, and the points span diverse dimensions
   4 most points are specific and supported by an example, data or brief reason
   3 points are relevant and fairly specific, with some examples or reasons;
     others are bare labels
-  2 is mostly bare labels with few examples or reasons
+  2 is mostly generic labels with few examples or reasons
   1 is only generic assertions with no specifics or reasons
   0 provides no meaningful analysis
   This question asks the candidate to describe, elaborate or identify. Short,
   crisp points that each carry a specific example, fact or reason are good
-  analysis here. Do not require long explanation of every point.""",
+  analysis here. Do not require long explanation of every point, and do not ask
+  for causal mechanisms in the feedback.
+""" + _SPECIFIC_POINT_NOTE,
 }
 
 
 def analysis_expectation(directive) -> str:
-    """Return 'analytical', 'descriptive' or 'balanced' for a question directive."""
-    d = str(directive or "").lower()
-    for kw in _ANALYTICAL_DIRECTIVES:
-        if re.search(r"\b" + re.escape(kw) + r"\b", d):
-            return "analytical"
-    for kw in _DESCRIPTIVE_DIRECTIVES:
-        if re.search(r"\b" + re.escape(kw) + r"\b", d):
-            return "descriptive"
-    return "balanced"
+    """Return 'analytical', 'judgement', 'descriptive' or 'balanced' for a directive."""
+    return directive_kind(directive)
+
+
+def directive_type(directive, question: str = "") -> str:
+    """Every directive in the extracted directive and the question text counts; the most
+    demanding one decides (judgement > analytical > balanced > descriptive)."""
+    return directive_kind(directive, question)
+
+
+# Directive types for which the "too few causal explanations" cap applies.
+MECHANISM_CAP_TYPES = ("analytical", "balanced")
 
 
 # ------------------------------------------------------------------ LLM call
@@ -133,7 +185,10 @@ def score_answer(
     structured_llm = llm.with_structured_output(DimensionScoresResponse)
 
     directive = question_analysis.get("directive", "") if isinstance(question_analysis, dict) else ""
-    analysis_levels = ANALYSIS_LEVELS[analysis_expectation(directive)]
+    analysis_levels = ANALYSIS_LEVELS[directive_type(directive, question)]
+    demands = build_demands(question, question_analysis)
+    directive_text = directive_guide(question, directive)
+    demand_text = demand_block(demands)
 
     prompt = f"""
 You are an experienced, strict UPSC GS Mains answer evaluator.
@@ -154,6 +209,10 @@ QUESTION ANALYSIS (a guide to what is expected, NOT part of the answer):
 
 DETECTED FEATURES (facts about the answer, treat as reliable):
 {features}
+
+{directive_text}
+
+{demand_text}
 
 Score each of the five dimensions as an integer LEVEL from 0 to 5.
 
@@ -238,6 +297,11 @@ coverage_balance
   1 addresses only a narrow fragment
   0 provides almost no meaningful coverage
   Judge coverage relative to the word limit and marks.
+  What fits: about 6-8 distinct points for a 150-word answer and 10-12 for a
+  250-word answer, spread over every demand of the question and its main
+  dimensions. A missing demand of the question is a real gap. Topics that
+  could not fit in the word limit are not gaps: do not list them as missing,
+  and do not lower coverage below 3 for them when every demand is addressed.
   Do not count every expected-coverage bullet as a separate requirement.
   For multi-part questions, assess whether each central demand receives
   meaningful attention, not whether every possible example is included.
@@ -294,7 +358,9 @@ FACTUAL CONCERNS
 Return exactly one entry per dimension. Return only the structured response.
 """
 
-    return structured_llm.invoke(prompt).model_dump()
+    result = structured_llm.invoke(prompt).model_dump()
+    result["demands"] = demands      # saved with the raw output, so --replay can re-apply caps
+    return result
 
 
 # --------------------------------------------- candidate-facing caps (features)
@@ -305,6 +371,8 @@ def compute_caps(
     word_count: int,
     word_limit: int | None,
     word_limit_status: str = "not_specified",
+    directive: str = "",
+    question: str = "",
 ) -> dict[str, tuple[int, str]]:
     """Apply only conservative, high-confidence caps."""
     caps: dict[str, tuple[int, str]] = {}
@@ -342,7 +410,7 @@ def compute_caps(
     # 2 for a 150-word answer, scaled with the word limit (3 for 250 words).
     needed = required_mechanisms(word_limit)
     found = features.get("mechanisms_explained", needed)
-    if found < needed:
+    if found < needed and directive_type(directive, question) in MECHANISM_CAP_TYPES:
         caps["analysis_depth"] = (
             3,
             "Few causal explanations (how or why) are given; most points are assertions."
@@ -352,7 +420,7 @@ def compute_caps(
         )
 
     # Relevance / structure: how the words are spread over the question's parts.
-    alloc = allocation_caps(features)
+    alloc = allocation_caps(features, question)
     for dim, cap in alloc.items():
         if dim in caps:
             caps[dim] = (min(caps[dim][0], cap[0]), f"{caps[dim][1]} {cap[1]}")
@@ -368,7 +436,7 @@ def required_mechanisms(word_limit: int | None) -> int:
     return max(2, round(2 * word_limit / 150))
 
 
-def allocation_caps(features: dict) -> dict[str, tuple[int, str]]:
+def allocation_caps(features: dict, question: str = "") -> dict[str, tuple[int, str]]:
     """Caps from the measured share of the answer body spent on each question part.
 
     Only applies when the feature step produced a valid allocation for a question
@@ -376,6 +444,8 @@ def allocation_caps(features: dict) -> dict[str, tuple[int, str]]:
     from the body."""
     caps: dict[str, tuple[int, str]] = {}
     shares = features.get("part_word_share") or []
+    # Parts that only restate the directive or add a side the question never asks.
+    shares = [p for p in shares if not is_meta_part(p.get("part", ""), question)]
     if len(shares) < 2:
         return caps
 
@@ -519,13 +589,20 @@ def finalize_scores(
     answer: str = "",
     factual_concerns: list[dict] | None = None,
     confirmed_errors: list[dict] | None = None,
+    directive: str = "",
+    question: str = "",
+    demands: list[dict] | None = None,
+    demand_check: list | None = None,
 ) -> tuple[list[dict], list[str]]:
     """Apply caps, audit and factual concerns, convert levels to marks, apply the ceiling."""
     names = [i.get("dimension") for i in raw_items]
     if len(raw_items) != 5 or len(set(names)) != 5 or set(names) != EXPECTED_DIMENSIONS:
         return [], ["The returned dimensions do not match the five required dimensions."]
 
-    caps = compute_caps(features, word_count, word_limit, word_limit_status)
+    caps = compute_caps(features, word_count, word_limit, word_limit_status, directive, question)
+    # The judge's demand check: a missing or thin part of the question caps the levels.
+    for dim, cap in demand_caps(demands, demand_check, question).items():
+        caps[dim] = (min(caps[dim][0], cap[0]), f"{caps[dim][1]} {cap[1]}") if dim in caps else cap
     final = []
 
     for item in raw_items:
@@ -581,7 +658,7 @@ def finalize_scores(
         dmax = dimension_max(dim, max_marks)
         final.append({
             "dimension": dim,
-            "score": round(LEVEL_TO_FRACTION[level] * dmax, 2),
+            "score": round(level_fraction(level, max_marks) * dmax, 2),
             "max_score": dmax,
             "raw_level": raw_level,
             "final_level": level,

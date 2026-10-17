@@ -96,7 +96,7 @@ def to_ten(case, value):
 def check_case(case):
     """Warn about golden entries the evaluator would misread."""
     orig = case.get("original_max_marks") or case.get("max_marks")
-    want = {10: 150, 15: 250}.get(orig)
+    want = {10: 150, 15: 250, 20: 250}.get(orig)
     if want and case.get("word_limit") != want:
         print(f"[warn] {case['id']}: {orig} marks but word_limit={case.get('word_limit')} (expected {want})")
 
@@ -137,6 +137,10 @@ def score_once(state, graph_mod, replay_raw=None):
     finally:
         graph_mod.score_answer = original
     dims = update.get("dimension_scores") or []
+    if not update.get("scores_valid") or not dims:
+        # The judge returned an incomplete or invalid response. Raise so the caller
+        # retries, instead of saving a 0.0 that looks like a real score.
+        raise RuntimeError(f"invalid judge output: {update.get('score_errors')}")
     return {
         "raw_total": update.get("raw_total_score"),
         "final_total": update.get("total_score"),
@@ -180,7 +184,8 @@ def run_cases(cases, saved, repeats, rebuild):
 
     for case in cases:
         cid = case["id"]
-        have = saved.get(cid, {}).get("runs", [])
+        # Runs without dimension scores were failed judge calls saved as 0.0; redo them.
+        have = [r for r in saved.get(cid, {}).get("runs", []) if r.get("dims")]
         if len(have) >= repeats and not rebuild:
             print(f"[skip] {cid} ({len(have)} runs)")
             continue
@@ -234,7 +239,7 @@ def ranks(xs):
 def report(cases, saved, show_text):
     rows = []
     for c in cases:
-        runs = saved.get(c["id"], {}).get("runs", [])
+        runs = [r for r in saved.get(c["id"], {}).get("runs", []) if r.get("dims")]
         finals = [to_ten(c, r["final_total"]) for r in runs if r.get("final_total") is not None]
         if not finals:
             continue

@@ -68,6 +68,13 @@ Rules for interpreting the question:
    Do not split one demand into many small subtopics merely to create
    a longer checklist.
 
+5b. question_parts are ONLY what the question text itself asks. Do not add
+   the directive restated as a task (for example "state whether you agree",
+   "make a reasoned assessment of the extent", "give a verdict"), and do not
+   add sides or elements the question does not mention (limitations,
+   challenges, definitions, examples, data, way forward) unless the question
+   asks for them. The directive is handled separately.
+
 6. Keep essential_points concise and limited to the central requirements.
    A short answer should not be expected to cover every relevant angle.
    Scale the expected breadth to the marks and word limit.

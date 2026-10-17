@@ -1,3 +1,4 @@
+from app.evaluator.scoring import allocation_caps
 import pytest
 
 from app.evaluator.scoring import (
@@ -73,9 +74,23 @@ def test_dimension_maxes_add_up():
 
 
 def test_fifteen_mark_scale_is_larger():
-    ten = sum(s["score"] for s in finalize(raw(3), 10).values())
-    fifteen = sum(s["score"] for s in finalize(raw(3), 15).values())
+    # Low levels scale exactly with the marks.
+    ten = sum(s["score"] for s in finalize(raw(2), 10).values())
+    fifteen = sum(s["score"] for s in finalize(raw(2), 15).values())
     assert abs(fifteen - 1.5 * ten) < 0.1
+
+
+def test_fifteen_mark_levels_3_to_5_are_stricter():
+    from app.evaluator.scoring import level_fraction
+    for level in (3, 4, 5):
+        assert level_fraction(level, 15) < level_fraction(level, 10)
+    for level in (0, 1, 2):
+        assert level_fraction(level, 15) == level_fraction(level, 10)
+    ten = sum(s["score"] for s in finalize(raw(4), 10).values()) / 10
+    fifteen = sum(s["score"] for s in finalize(raw(4), 15).values()) / 15
+    assert fifteen < ten
+    # Still increasing with level, so ranking is kept.
+    assert [level_fraction(l, 15) for l in range(6)] == sorted(level_fraction(l, 15) for l in range(6))
 
 
 # ------------------------------------------------------------- audit
@@ -227,8 +242,11 @@ def test_analysis_expectation():
     from app.evaluator.scoring import analysis_expectation
     assert analysis_expectation("Elaborate on the significance") == "descriptive"
     assert analysis_expectation("Describe") == "descriptive"
-    assert analysis_expectation("Identify and discuss") == "descriptive"
-    assert analysis_expectation("Critically examine") == "analytical"
+    assert analysis_expectation("Identify and discuss") == "balanced"   # discuss outranks identify
+    assert analysis_expectation("Critically examine") == "judgement"
+    assert analysis_expectation("Critically analyse") == "judgement"   # weigh both sides, then a verdict
+    assert analysis_expectation("To what extent has it succeeded?") == "judgement"
+    assert analysis_expectation("Do you agree? Discuss.") == "judgement"
     assert analysis_expectation("Analyze") == "analytical"
     assert analysis_expectation("Discuss") == "balanced"
     assert analysis_expectation("") == "balanced"
@@ -286,3 +304,128 @@ def test_allocation_caps():
     assert allocation_caps(order)["structure_presentation"][0] == 3
     # Old cached features without allocation fields: no caps.
     assert allocation_caps({"has_conclusion": True}) == {}
+
+
+def test_directive_type_uses_question_when_directive_is_generic():
+    from app.evaluator.scoring import directive_type
+    q = "To what extent can the rise of 'Kidfluencers' be seen as a reflection of changing family structures?"
+    assert directive_type("Examine", q) == "judgement"
+    assert directive_type("Analyze", q) == "judgement"    # "to what extent" in the question outranks it
+    assert directive_type("", "Highlight the salient differences.") == "descriptive"
+
+
+def test_mechanism_cap_only_where_explanation_is_asked():
+    feats = {"has_conclusion": True, "mechanisms_explained": 0}
+    assert "analysis_depth" in compute_caps(feats, 140, 150, "within_limit", "Discuss")
+    assert "analysis_depth" in compute_caps(feats, 140, 150, "within_limit", "Analyze")
+    assert "analysis_depth" not in compute_caps(feats, 140, 150, "within_limit", "To what extent")
+    assert "analysis_depth" not in compute_caps(feats, 140, 150, "within_limit", "Highlight")
+    assert "analysis_depth" not in compute_caps(
+        feats, 140, 150, "within_limit", "Examine", "Do you agree with this view?")
+
+
+def test_every_rubric_explains_specific_points():
+    from app.evaluator.scoring import ANALYSIS_LEVELS
+    assert set(ANALYSIS_LEVELS) == {"analytical", "judgement", "balanced", "descriptive"}
+    for text in ANALYSIS_LEVELS.values():
+        assert "specific point even without a why-sentence" in text
+    assert "Do not lower this dimension for missing causal mechanisms" in ANALYSIS_LEVELS["judgement"]
+
+
+def test_directive_kind_uses_every_directive():
+    from app.evaluator.demands import directive_kind, find_directives
+    assert directive_kind("", "What is floriculture? How is it helpful in boosting exports?") == "descriptive"
+    assert directive_kind("", "What are REEs? Discuss the implications.") == "balanced"
+    assert directive_kind("Examine", "To what extent can X be seen as Y?") == "judgement"
+    assert directive_kind("", "Critically analyse the scheme.") == "judgement"
+    assert directive_kind("", "Analyze.") == "analytical"
+    keys = [f["key"] for f in find_directives("Critically examine the procedure.")]
+    assert keys == ["critically"]                        # not also "examine"
+    # "State" as a noun and "What is your opinion" are not directives of their own
+    assert "define" not in [f["key"] for f in find_directives("What is your opinion? Give reasons.")]
+    assert find_directives("The British Indian State changed.") == []
+
+
+def test_build_demands_numbers_parts_and_directive_needs():
+    from app.evaluator.demands import build_demands
+    q = "What are the objectives of IBC? To what extent has it been successful?"
+    d = build_demands(q, {"question_parts": ["objectives of IBC", "extent of success"], "directive": ""})
+    ids = [x["id"] for x in d]
+    assert ids[:2] == ["Q1", "Q2"]
+    assert any(x["source"] == "directive" for x in d)
+    assert all(x["cap"] is None for x in d if x["source"] == "directive")   # feedback only
+    # no question_parts: the question itself is Q1
+    assert build_demands("Discuss X.", {})[0] == {"id": "Q1", "text": "Discuss X.", "source": "question", "cap": None}
+
+
+def test_demand_caps():
+    from app.evaluator.demands import build_demands, demand_caps
+    q = "Explain X. What are its consequences? To what extent has it worked?"
+    d = build_demands(q, {"question_parts": ["explain X", "consequences", "extent"]})
+    assert demand_caps(d, []) == {}                      # old saved runs: no caps
+    caps = demand_caps(d, [{"id": "Q2", "status": "missing"}])
+    assert caps["coverage_balance"][0] == 3 and caps["relevance"][0] == 3
+    assert "consequences" in caps["coverage_balance"][1]
+    caps = demand_caps(d, [{"id": "Q1", "status": "missing"}, {"id": "Q2", "status": "missing"}])
+    assert caps["coverage_balance"][0] == 2
+    assert demand_caps(d, [{"id": "Q3", "status": "thin"}])["coverage_balance"][0] == 3
+    verdict = next(x["id"] for x in d if "verdict" in x["text"])
+    assert demand_caps(d, [{"id": verdict, "status": "missing"}]) == {}    # feedback only
+    c = build_demands("Critically examine the scheme.", {"question_parts": ["the scheme"]})
+    both = next(x["id"] for x in c if "merits" in x["text"])
+    assert demand_caps(c, [{"id": both, "status": "missing"}])["analysis_depth"][0] == 3
+    # feedback-only directive demands never cap; unknown ids are ignored
+    assert demand_caps(d, [{"id": "Q1", "status": "covered"}, {"id": "Z9", "status": "missing"}]) == {}
+
+
+def test_finalize_applies_demand_caps():
+    from app.evaluator.demands import build_demands
+    items = [{"dimension": dim, "score": 5, "justification": "ok",
+              "evidence_from_answer": [], "improvement": "None"}
+             for dim in ("relevance", "content_substantiation", "analysis_depth",
+                         "coverage_balance", "structure_presentation")]
+    d = build_demands("Q?", {"question_parts": ["part one", "part two"]})
+    final, issues = finalize_scores(items, {"has_conclusion": True}, 140, 150, 10, "within_limit",
+                                    demands=d, demand_check=[{"id": "Q2", "status": "missing"}])
+    levels = {x["dimension"]: x["final_level"] for x in final}
+    assert levels["coverage_balance"] == 3 and levels["relevance"] == 3
+
+
+def test_meta_parts_are_not_question_parts():
+    from app.evaluator.demands import is_meta_part, build_demands
+    k = ("To what extent can the rise of 'Kidfluencers' be seen as a reflection of changing "
+         "family structures and parental aspirations in Indian society?")
+    assert is_meta_part("Make a reasoned assessment of the extent to which this rise reflects", k)
+    assert is_meta_part("Analyse the relationship between the rise and the changes", k)
+    assert is_meta_part("State whether you agree or disagree with the statement.", "Do you agree?")
+    assert not is_meta_part("Identify changes in family structures", k)
+    e = "Under what conditions can Emergency be proclaimed? What are the consequences?"
+    assert not is_meta_part("Consequences while in force", e)
+    assert is_meta_part("Challenges faced by associations", "In what ways do associations contribute?")
+    assert not is_meta_part("Provide suitable examples", "Explain with suitable examples.")
+    ids = [d["text"] for d in build_demands(k, {"question_parts": [
+        "Identify changes in family structures", "Make a reasoned assessment of the extent"]})]
+    assert "Make a reasoned assessment of the extent" not in ids
+
+
+def test_allocation_ignores_meta_parts():
+    feats = {"part_word_share": [
+        {"part": "Identify changes in family structures", "share": 0.5},
+        {"part": "Identify parental aspirations", "share": 0.5},
+        {"part": "Make a reasoned assessment of the extent", "share": 0.0},
+    ]}
+    assert "relevance" not in allocation_caps(feats, "To what extent can X be seen as Y?")
+
+
+def test_demand_caps_replay_uses_current_rules():
+    from app.evaluator.demands import demand_caps
+    q = "To what extent can X be seen as Y?"
+    saved = [  # as saved by an earlier run: an invented part and an old verdict cap
+        {"id": "Q1", "text": "Identify Y", "source": "question", "cap": None},
+        {"id": "Q2", "text": "Make a reasoned assessment of the extent", "source": "question", "cap": None},
+        {"id": "D1", "text": "a clear, reasoned verdict on the extent or view asked",
+         "source": "directive", "cap": "analysis_depth"},
+    ]
+    check = [{"id": "Q1", "status": "covered"}, {"id": "Q2", "status": "missing"},
+             {"id": "D1", "status": "missing"}]
+    assert demand_caps(saved, check, q) == {}

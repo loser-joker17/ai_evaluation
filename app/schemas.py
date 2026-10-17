@@ -26,7 +26,7 @@ class EvaluationInput(BaseModel):
 
     question: str = Field(min_length=5, description="UPSC GS Mains question")
     answer: str = Field(min_length=1, description="Student's written answer")
-    max_marks: Literal[10, 15] = Field(
+    max_marks: Literal[10, 15, 20] = Field(
         description="Maximum marks available: 10 or 15"
     )
     word_limit: int | None = Field(
@@ -110,11 +110,20 @@ class RawDimensionScore(BaseModel):
     improvement: str
 
 
+class DemandCheck(BaseModel):
+    """The judge's status for one numbered demand (Q1, D1 ...)."""
+
+    id: str
+    status: Literal["covered", "thin", "missing"]
+    evidence: str = ""
+
+
 class DimensionScoresResponse(BaseModel):
     """The five raw dimension levels proposed by the LLM."""
 
     dimension_scores: list[RawDimensionScore]
     factual_concerns: list[FactualConcern] = Field(default_factory=list)
+    demand_check: list[DemandCheck] = Field(default_factory=list)
 
 
 class DimensionScore(BaseModel):
@@ -161,7 +170,7 @@ class EvaluationOutput(BaseModel):
     dimension_scores: list[DimensionScore] = Field(default_factory=list)
     total_score: float | None = Field(default=None, ge=0)
     raw_total_score: float | None = Field(default=None, ge=0)
-    max_marks: Literal[10, 15]
+    max_marks: Literal[10, 15, 20]
     word_count: int = Field(default=0, ge=0)
     word_limit_status: str = "not_specified"
 

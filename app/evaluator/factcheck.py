@@ -17,24 +17,38 @@ WEB_MODE = "always"
 
 # Official or near-official sources only. Check each domain still serves what you need.
 TRUSTED_DOMAINS = [
-    "indiacode.nic.in",
-    "legislative.gov.in",
-    "sci.gov.in",
-    "prsindia.org",
-    "pib.gov.in",
-    "darpg.gov.in",
-    "eci.gov.in",
-    "loksabha.nic.in",
-    "rajyasabha.nic.in",
-    # GS-3 (economy, budget, statistics, science)
-    "incometaxindia.gov.in",
-    "indiabudget.gov.in",
-    "rbi.org.in",
-    "mospi.gov.in",
-    "dea.gov.in",
-    "niti.gov.in",
-    "isro.gov.in",
+    # --- GS-1: History, Art & Culture, Geography ---
+    "indiaculture.gov.in",   # Ministry of Culture (Schemes, archives, festivals)
+    "ccrtindia.gov.in",      # Centre for Cultural Resources and Training (Definitive art & culture monographs)
+    "gsi.gov.in",            # Geological Survey of India (Mineral resources, geographic mapping)
+    "mausam.imd.gov.in",     # India Meteorological Department (Monsoon updates, climate trends)
+
+    # --- GS-2: Polity, Governance, Constitution & IR ---
+    "indiacode.gov.in",      # Updated from indiacode.nic.in due to site migration
+    "legislative.gov.in",    # Ministry of Law & Justice (Acts, central bills)
+    "sci.gov.in",            # Supreme Court of India (Landmark judgements, constitutional benches)
+    "prsindia.org",          # PRS Legislative Research (Simplified bill summaries & legislative briefs)
+    "pib.gov.in",            # Press Information Bureau (Official press releases & PIB Fact Check)
+    "darpg.gov.in",          # Administrative Reforms & Public Grievances (e-Gov, ARC reports)
+    "eci.gov.in",            # Election Commission of India (Electoral data, model code of conduct)
+    "loksabha.nic.in",       # Parliament of India - Lok Sabha portal
+    "rajyasabha.nic.in",     # Parliament of India - Rajya Sabha portal
+    
+    # --- GS-3: Economy, Budget, Banking & Science ---
+    "incometaxindia.gov.in", # Central Board of Direct Taxes updates
+    "indiabudget.gov.in",    # Union Budget documents & annual Economic Survey
+    "rbi.org.in",            # Reserve Bank of India (Monetary policy, financial stability reports)
+    "mospi.gov.in",          # Ministry of Statistics & Programme Implementation (GDP, CPI, IIP data)
+    "dea.gov.in",            # Department of Economic Affairs (Capital markets, external debt reports)
+    "niti.gov.in",           # NITI Aayog (Policy indices, state rankings, SDG tracking dashboards)
+    "isro.gov.in",           # Indian Space Research Organisation (Space missions, satellite data)
+
+    # --- GS-3: Environment, Forest & Climate Change ---
+    "moef.gov.in",           # Ministry of Environment, Forest and Climate Change (Forest surveys, wildlife census)
+    "cpcb.nic.in",           # Central Pollution Control Board (AQI data, environmental regulations)
+    "wii.gov.in",            # Wildlife Institute of India (Endangered species, conservation statuses)
 ]
+
 
 MAX_CLAIMS = 5
 MIN_CLAIM_WORDS = 4

@@ -365,7 +365,10 @@ FACTUAL CONCERNS
 Return exactly one entry per dimension. Return only the structured response.
 """
 
-    result = structured_llm.invoke(prompt).model_dump()
+    response = structured_llm.invoke(prompt)
+    if response is None:
+        raise RuntimeError("The judge returned no usable output (empty or unparseable reply).")
+    result = response.model_dump()
     result["demands"] = demands      # saved with the raw output, so --replay can re-apply caps
     return result
 
@@ -602,9 +605,17 @@ def finalize_scores(
     demand_check: list | None = None,
 ) -> tuple[list[dict], list[str]]:
     """Apply caps, audit and factual concerns, convert levels to marks, apply the ceiling."""
-    names = [i.get("dimension") for i in raw_items]
-    if len(raw_items) != 5 or len(set(names)) != 5 or set(names) != EXPECTED_DIMENSIONS:
+    # Keep the first valid entry per dimension; the judge sometimes repeats one or adds
+    # an extra. Only reject when one of the five is actually missing.
+    first = {}
+    for item in raw_items or []:
+        dim = item.get("dimension") if isinstance(item, dict) else None
+        if dim in EXPECTED_DIMENSIONS and dim not in first and isinstance(item.get("score"), int) \
+                and not isinstance(item.get("score"), bool):
+            first[dim] = item
+    if set(first) != EXPECTED_DIMENSIONS:
         return [], ["The returned dimensions do not match the five required dimensions."]
+    raw_items = [first[d] for d in DIMENSION_WEIGHTS if d in first]
 
     caps = compute_caps(features, word_count, word_limit, word_limit_status, directive, question)
     # The judge's demand check: a missing or thin part of the question caps the levels.

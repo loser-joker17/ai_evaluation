@@ -473,3 +473,33 @@ def test_invented_sub_parts_are_not_question_parts():
     assert not is_meta_part("Explain the steps taken to resolve or cope with the crisis.", c)
     e = "Distinguish between empathy and compassion. Why are they foundational values?"
     assert not is_meta_part("Highlight the key differences between the two concepts.", e)
+
+
+def test_duplicate_dimension_keeps_first_entry():
+    items = raw(3) + [dict(raw(5)[0])]          # the judge repeated one dimension
+    scores, issues = finalize_scores(raw_items=items, features=FEATURES, word_count=100,
+                                     word_limit=150, max_marks=10,
+                                     word_limit_status="within_limit", answer=ANSWER)
+    assert not issues and len(scores) == 5
+    assert all(s["raw_level"] == 3 for s in scores)
+
+
+def test_missing_dimension_is_still_rejected():
+    scores, issues = finalize_scores(raw_items=raw(3)[:4], features=FEATURES, word_count=100,
+                                     word_limit=150, max_marks=10,
+                                     word_limit_status="within_limit", answer=ANSWER)
+    assert scores == [] and issues
+
+
+def test_backup_used_when_main_model_returns_nothing():
+    from app.llm import _StructuredWithBackup
+
+    class Empty:
+        def invoke(self, *a, **k):
+            return None
+
+    class Good:
+        def invoke(self, *a, **k):
+            return "ok"
+
+    assert _StructuredWithBackup(Empty(), Good(), "b").invoke("x") == "ok"

@@ -127,7 +127,7 @@ def evaluate_answer_node(state: EvaluatorState) -> dict:
     concerns = [c for c in concerns if not _covered(c)]
 
     scores, build_issues = finalize_scores(
-        raw_items=result["dimension_scores"],
+        raw_items=(result or {}).get("dimension_scores") or [],
         features=state["answer_features"],
         word_count=state["word_count"],
         word_limit=state.get("word_limit"),

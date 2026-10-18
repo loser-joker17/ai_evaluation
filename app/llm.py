@@ -81,18 +81,22 @@ fast_llm = make_llm(
 )
 
 class _StructuredWithBackup:
-    """Calls the main judge; if that call fails (provider down, busy, bad output),
-    the same request goes to the backup judge and a line is printed saying so."""
+    """Calls the main model; if that call fails (provider down, busy, bad output) or
+    returns nothing, the same request goes to the backup model and a line says so."""
 
     def __init__(self, primary, backup, backup_name):
         self.primary, self.backup, self.backup_name = primary, backup, backup_name
 
     def invoke(self, *args, **kwargs):
         try:
-            return self.primary.invoke(*args, **kwargs)
+            result = self.primary.invoke(*args, **kwargs)
+            if result is not None:
+                return result
+            reason = "empty reply"
         except Exception as exc:
-            print(f"[judge-backup] main judge failed ({type(exc).__name__}); using {self.backup_name}")
-            return self.backup.invoke(*args, **kwargs)
+            reason = type(exc).__name__
+        print(f"[backup] main model failed ({reason}); using {self.backup_name}")
+        return self.backup.invoke(*args, **kwargs)
 
 
 class _JudgeWithBackup:
@@ -141,7 +145,6 @@ if os.getenv("JUDGE_BACKUP_MODEL"):
         f"{_backup_provider}/{os.getenv('JUDGE_BACKUP_MODEL')}",
     )
 
-llm = fast_llm  # Existing imports keep working
 
 
 # Smaller/faster model for question analysis and feature extraction.
@@ -151,3 +154,18 @@ light_llm = make_llm(
     or os.getenv("FAST_MODEL", "nvidia/nemotron-3-ultra-550b-a55b"),
     provider=os.getenv("LIGHT_PROVIDER") or os.getenv("FAST_PROVIDER"),
 )
+
+
+# Optional backup for the other roles (question analysis, features, fact-check, feedback):
+#   LLM_BACKUP_PROVIDER=unorouter
+#   LLM_BACKUP_MODEL=gpt-oss-20b:free
+# Off unless LLM_BACKUP_MODEL is set. The judge uses JUDGE_BACKUP_* (above).
+if os.getenv("LLM_BACKUP_MODEL"):
+    _llm_backup_provider = os.getenv("LLM_BACKUP_PROVIDER") or DEFAULT_PROVIDER
+    _llm_backup_name = f"{_llm_backup_provider}/{os.getenv('LLM_BACKUP_MODEL')}"
+    fast_llm = _JudgeWithBackup(
+        fast_llm, make_llm(os.getenv("LLM_BACKUP_MODEL"), provider=_llm_backup_provider), _llm_backup_name)
+    light_llm = _JudgeWithBackup(
+        light_llm, make_llm(os.getenv("LLM_BACKUP_MODEL"), provider=_llm_backup_provider), _llm_backup_name)
+
+llm = fast_llm  # Existing imports keep working

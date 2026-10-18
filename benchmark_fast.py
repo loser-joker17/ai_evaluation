@@ -25,6 +25,7 @@ Writes: data/benchmark/results/fast_scores.json (includes the judge's justificat
 import argparse
 import copy
 import json
+import os
 import pickle
 import re
 import statistics
@@ -33,7 +34,8 @@ from pathlib import Path
 
 GOLDEN_GLOB = "data/benchmark/*_examiner_golden.json"
 CACHE_DIR = Path("data/benchmark/results/state_cache")
-RESULTS = Path("data/benchmark/results/fast_scores.json")
+# BENCH_RESULTS lets a judge experiment write to its own file instead of the main one.
+RESULTS = Path(os.getenv("BENCH_RESULTS", "data/benchmark/results/fast_scores.json"))
 REPLAY = Path("data/benchmark/results/fast_replay.json")
 INPUT_KEYS = ("question", "answer", "subject", "max_marks", "word_limit")
 UPSTREAM = ("validate_input_node", "analyze_input_node", "analyze_question_node", "extract_features_node")
@@ -179,6 +181,38 @@ def replay_cases(cases, saved):
     return out
 
 
+# Free endpoints reject calls when their shared capacity is used up (429 / 503 "busy" /
+# "per minute limit"). That is not a judge failure: wait and try again instead of
+# losing the case. BENCH_PAUSE (seconds) adds a pause before every judge call.
+_BUSY_MARKERS = ("429", "rate limit", "rate_limit", "per minute limit", "are busy", "get_channel_failed")
+BUSY_WAITS = (20, 40, 60, 90, 120, 180)
+PAUSE = float(os.getenv("BENCH_PAUSE", "0"))
+
+
+def _is_busy(exc):
+    text = repr(exc).lower()
+    return any(m in text for m in _BUSY_MARKERS)
+
+
+def score_with_backoff(state, graph_mod, cid):
+    waited = 0
+    for wait in BUSY_WAITS + (None,):
+        if PAUSE:
+            time.sleep(PAUSE)
+        try:
+            result = score_once(state, graph_mod)
+            if waited:
+                print(f"       waited {waited}s in total for {cid}")
+            return result
+        except Exception as exc:
+            if wait is None or not _is_busy(exc):
+                raise
+            if not waited:  # one line per case, however many waits follow
+                print(f"[busy] {cid}: provider busy, waiting (up to {sum(BUSY_WAITS)}s)...")
+            waited += wait
+            time.sleep(wait)
+
+
 def run_cases(cases, saved, repeats, rebuild):
     import app.evaluator.graph as graph_mod
 
@@ -198,12 +232,12 @@ def run_cases(cases, saved, repeats, rebuild):
         runs = list(have)
         while len(runs) < repeats:
             try:
-                runs.append(score_once(state, graph_mod))
+                runs.append(score_with_backoff(state, graph_mod, cid))
             except Exception as exc:
                 print(f"[retry] {cid}: {exc!r}")
                 time.sleep(5)
                 try:
-                    runs.append(score_once(state, graph_mod))
+                    runs.append(score_with_backoff(state, graph_mod, cid))
                 except Exception as exc2:
                     print(f"[error] {cid}: {exc2!r}")
                     break

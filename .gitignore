@@ -13,19 +13,6 @@ __pycache__/
 
 # notes: keep local, never commit
 data/corpus/*.pdf
-data/benchmark/results/state_cache/data/cache/corpus_chunks.json
-
-
-Add-Content .gitignore "`n# local / private"
-Add-Content .gitignore "*.bak"
-Add-Content .gitignore "*.bak2"
-Add-Content .gitignore "*.bak3"
-Add-Content .gitignore "*_log*.txt"
-Add-Content .gitignore "pytest_log.txt"
-Add-Content .gitignore "data/benchmark/*_examiner_golden.json"
-Add-Content .gitignore "data/benchmark/results/"
-Add-Content .gitignore "data/cache/"
-
 
 # candidate answers and benchmark outputs - never commit
 data/benchmark/*_examiner_golden.json

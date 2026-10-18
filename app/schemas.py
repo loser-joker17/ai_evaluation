@@ -69,6 +69,8 @@ class RawAnswerFeatures(BaseModel):
     # One label per numbered block of the answer: "P1", "P2", ... (the question
     # part it answers), "intro", "conclusion", "wayforward" or "other".
     block_labels: list[str] = Field(default_factory=list)
+    # Each distinct point that helps answer the question, quoted from the answer.
+    relevant_points: list[str] = Field(default_factory=list)
 
 
 class AnswerFeatures(BaseModel):
@@ -89,6 +91,9 @@ class AnswerFeatures(BaseModel):
     part_word_share: list[dict] = Field(default_factory=list)   # [{"part": str, "share": float}]
     unasked_share: float | None = None
     parts_in_order: bool | None = None
+    # Relevant points whose quote was found in the answer (None: not extracted, old cache).
+    relevant_points: list[str] = Field(default_factory=list)
+    relevant_point_count: int | None = None
     feature_notes: list[str] = Field(default_factory=list)
 
 

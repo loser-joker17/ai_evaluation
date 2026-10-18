@@ -431,3 +431,45 @@ def test_demand_caps_replay_uses_current_rules():
     check = [{"id": "Q1", "status": "covered"}, {"id": "Q2", "status": "missing"},
              {"id": "D1", "status": "missing"}]
     assert demand_caps(saved, check, q) == {}
+
+
+def test_incomplete_answer_is_scaled_by_share_written():
+    full, _ = finalize_scores(
+        raw_items=raw(3), features=FEATURES, word_count=100, word_limit=150,
+        max_marks=10, word_limit_status="within_limit", answer=ANSWER,
+    )
+    frag, _ = finalize_scores(
+        raw_items=raw(3), features=FEATURES, word_count=38, word_limit=150,
+        max_marks=10, word_limit_status="under_limit", answer=ANSWER,
+    )
+    t_full = sum(d["score"] for d in full)
+    t_frag = sum(d["score"] for d in frag)
+    assert t_frag == pytest.approx(t_full * 38 / 75, abs=0.05)
+    by = {d["dimension"]: d for d in frag}
+    assert "Incomplete answer" in by["coverage_balance"]["improvement"]
+
+
+def test_answer_at_half_the_limit_is_not_scaled():
+    a, _ = finalize_scores(raw_items=raw(3), features=FEATURES, word_count=75, word_limit=150,
+                           max_marks=10, word_limit_status="under_limit", answer=ANSWER)
+    b, _ = finalize_scores(raw_items=raw(3), features=FEATURES, word_count=140, word_limit=150,
+                           max_marks=10, word_limit_status="within_limit", answer=ANSWER)
+    assert sum(d["score"] for d in a) == pytest.approx(sum(d["score"] for d in b), abs=0.01)
+
+
+def test_invented_sub_parts_are_not_question_parts():
+    from app.evaluator.demands import is_meta_part
+    q = ("'Operation Sindoor' signals a strategic evolution in India's approach to "
+         "cross-border terrorism. Analyze.")
+    assert is_meta_part("Contrast these features with India's previous responses to "
+                        "cross-border terrorism (e.g. surgical strikes, Balakot).", q)
+    assert is_meta_part("Explain the strategic evolution implied: shift in doctrine, "
+                        "escalation management, international messaging.", q)
+    k = ("To what extent can the rise of 'Kidfluencers' be seen as a reflection of changing "
+         "family structures and parental aspirations in Indian society?")
+    assert not is_meta_part("Identify key changes in Indian family structures", k)
+    c = ("What do you understand by the term 'crisis of conscience'? Describe an incident. "
+         "How did you deal with it?")
+    assert not is_meta_part("Explain the steps taken to resolve or cope with the crisis.", c)
+    e = "Distinguish between empathy and compassion. Why are they foundational values?"
+    assert not is_meta_part("Highlight the key differences between the two concepts.", e)

@@ -181,9 +181,48 @@ _SIDE_WORDS = {
 }
 
 
+# A "question part" the question text does not support: the question-analysis model
+# sometimes breaks a one-line question ("... Analyze.") into detailed sub-parts of its
+# own ("identify features (scale, targets, domains)", "contrast with previous
+# responses"). Answers were then capped for "missing" parts nobody asked for.
+# A part is ungrounded when most of its content words never appear in the question.
+# Questions that already ask several things (2+ question marks, lettered sub-parts as in
+# case studies) are left alone: there the parts come straight from the question.
+_GENERIC_WORDS = set("""
+identify explain discuss describe analyze analyse examine evaluate assess elaborate highlight
+provide propose suggest list enumerate state outline trace illustrate interpret relate link
+justify comment critically critical give present bring mention cite show demonstrate
+key main major principal various certain specific relevant important significant suitable
+concrete role nature scope concept concepts idea statement claim phenomenon question answer
+context light view aspect aspects factor factors issue issues current recent overall broader
+each both these those this that their there which with from into about such more most also
+other others between within without india indian country nation ways help helps through
+across being been have will would could should difference differences distinction similarities
+two three following given above taken
+""".split())
+
+
+def _content_words(text: str) -> list[str]:
+    words = re.findall(r"[a-z][a-z-]+", text.lower().replace("\u2019", "'").replace("'s", ""))
+    return [w for w in words if len(w) >= 4 and w not in _GENERIC_WORDS]
+
+
+def is_grounded_part(part: str, question: str) -> bool:
+    if not question:
+        return True
+    if question.count("?") >= 2 or re.search(r"(?:^|\n)\s*[a-e][.)]\s", question):
+        return True
+    words = _content_words(part)
+    if len(words) < 3:
+        return True
+    q_stems = {w[:5] for w in re.findall(r"[a-z][a-z-]+", question.lower())}
+    hits = sum(w[:5] in q_stems for w in words)
+    return hits / len(words) >= 0.34
+
+
 def is_meta_part(part: str, question: str = "") -> bool:
-    """True if a 'question part' is really the directive restated, or adds a side or
-    element the question text never mentions."""
+    """True if a 'question part' is really the directive restated, adds a side or
+    element the question text never mentions, or is mostly words the question never uses."""
     p, q = str(part or "").lower(), str(question or "").lower()
     if not p:
         return False
@@ -195,6 +234,8 @@ def is_meta_part(part: str, question: str = "") -> bool:
         for word, stem in _SIDE_WORDS.items():
             if word in p and stem not in q:
                 return True
+        if not is_grounded_part(part, question):
+            return True
     return False
 
 
@@ -297,3 +338,24 @@ def demand_caps(demands: list[dict] | None, demand_check: list | None,
         if s == "missing" and d["source"] == "directive" and d["cap"]:
             add(d["cap"], 3, f"The directive needs {d['text']}, which is missing.")
     return caps
+
+def answered_share(demands: list[dict] | None, demand_check: list | None,
+                   question: str = "") -> tuple[float | None, dict]:
+    """Share of the question's own parts the answer deals with: covered = 1, thin = 0.5,
+    missing = 0, averaged over the question parts (directive demands and meta parts are
+    left out). None when there is no check (old saved runs) or no question parts."""
+    if not demands or not demand_check:
+        return None, {}
+    parts = {d["id"]: d for d in demands
+             if d.get("source") == "question" and not is_meta_part(d.get("text", ""), question)}
+    status = {}
+    for item in demand_check:
+        get = item.get if isinstance(item, dict) else (lambda k, _i=item: getattr(_i, k, None))
+        did, st = str(get("id") or "").strip().upper(), str(get("status") or "").strip().lower()
+        if did in parts and st in ("covered", "thin", "missing"):
+            status[did] = st
+    if not status:
+        return None, {}
+    value = {"covered": 1.0, "thin": 0.5, "missing": 0.0}
+    share = sum(value[s] for s in status.values()) / len(status)
+    return share, {parts[i]["text"]: s for i, s in status.items()}

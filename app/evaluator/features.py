@@ -219,6 +219,12 @@ Extract the following from the ANSWER only:
                   not ask for, or points about a different topic.
   If a question part asks for suggestions or measures, label those blocks
   with that part, not "wayforward".
+- relevant_points: every distinct point the answer makes that helps answer
+  the QUESTION. Copy each one WORD FOR WORD from the answer (a short exact
+  phrase or sentence, at least 4 words). One entry per point; a point with its
+  example is one entry. Do NOT include the introduction, the conclusion, a
+  restatement of the question, general background, or anything off-topic.
+  A heading alone ("Challenges:") is not a point.
 
 RULES:
 1. List only items that literally appear in the answer. Do not infer.
@@ -274,6 +280,20 @@ Return only the structured RawAnswerFeatures response.
                    + len(features["examples_or_data"]))
     n_words = _word_count(answer)
     features["specifics_per_100_words"] = round(100 * n_specifics / n_words, 1) if n_words else None
+
+    # Relevant points: keep only quotes that really occur in the answer, once each.
+    answer_sq = _squash(answer)
+    kept, seen = [], set()
+    for q in raw.get("relevant_points") or []:
+        sq = _squash(str(q))
+        if len(sq) >= 12 and sq in answer_sq and sq not in seen:
+            seen.add(sq)
+            kept.append(str(q).strip())
+    if raw.get("relevant_points") and len(kept) < len(raw["relevant_points"]):
+        notes.append(f"Relevant points: {len(raw['relevant_points']) - len(kept)} quote(s) "
+                     f"not found in the answer or repeated, dropped.")
+    features["relevant_points"] = kept
+    features["relevant_point_count"] = len(kept)
 
     alloc = compute_allocation(blocks, raw.get("block_labels", []), parts)
     alloc_note = alloc.pop("note")

@@ -61,6 +61,11 @@ def level_fraction(level: int, max_marks: float) -> float:
 # No automated total may exceed this share of the maximum marks.
 MAX_FRACTION_OF_MARKS = 0.75
 
+# An answer under half the word limit is an incomplete attempt (in the examiner-marked
+# data every real answer used at least half the limit; the fragments used 17-29%).
+# Its marks are scaled by words / (half the limit): 25% written keeps half the marks.
+INCOMPLETE_SHARE = 0.5
+
 # Share of cited evidence that may fail verification before a high level
 # (4 or 5) is downgraded.
 MAX_BAD_EVIDENCE_SHARE = 1 / 3
@@ -671,7 +676,20 @@ def finalize_scores(
             "improvement": improvement,
         })
 
-    # 4. Global ceiling: scale all dimensions proportionally.
+    # 4. Incomplete attempt: scale every dimension by how much of the expected length
+    #    was written. Answers at or above half the word limit are not touched.
+    if word_limit and word_count < INCOMPLETE_SHARE * word_limit:
+        factor = word_count / (INCOMPLETE_SHARE * word_limit)
+        note = (f"Incomplete answer: {word_count} words for a {word_limit}-word question "
+                f"(about {round(100 * word_count / word_limit)}%). Marks are scaled to the part attempted; "
+                f"attempt every part of the question.")
+        for d in final:
+            d["score"] = round(d["score"] * factor, 2)
+            if d["dimension"] == "coverage_balance":
+                d["cap_note"] = " ".join(n for n in (d.get("cap_note"), note) if n)
+                d["improvement"] = f"{note} {d.get('improvement', '')}".strip()
+
+    # 5. Global ceiling: scale all dimensions proportionally.
     total = sum(d["score"] for d in final)
     ceiling = MAX_FRACTION_OF_MARKS * max_marks
     if total > ceiling:

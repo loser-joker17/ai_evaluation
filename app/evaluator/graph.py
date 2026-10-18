@@ -1,4 +1,5 @@
 import contextvars
+import os
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
@@ -103,8 +104,58 @@ def extract_features_node(state: EvaluatorState) -> dict:
 
 # ---------------------------------------------------------------- scoring
 
+# Long answers (15/20 marks, case studies) vary more between judge runs: the same
+# case study got 7.5, 9.25 and 10.25 out of 20. They are judged JUDGE_SAMPLES times
+# (default 3; 1 for short answers) and each dimension takes the median level, with
+# that run's justification. The benchmark sets JUDGE_SAMPLES=1 (it repeats runs itself).
+def _judge_samples(state) -> int:
+    forced = os.getenv("JUDGE_SAMPLES")
+    if forced:
+        return max(1, int(forced))
+    long_answer = state["max_marks"] >= 15 or (state.get("word_limit") or 0) >= 250
+    return 3 if long_answer else 1
+
+
+def _median_result(results: list[dict]) -> dict:
+    """One judge result whose dimension levels are the per-dimension medians."""
+    if len(results) == 1:
+        return results[0]
+    base = copy.deepcopy(results[0])
+    by_dim: dict[str, list[dict]] = {}
+    for r in results:
+        for item in (r or {}).get("dimension_scores") or []:
+            if isinstance(item, dict) and isinstance(item.get("score"), int):
+                by_dim.setdefault(item.get("dimension"), []).append(item)
+    merged = []
+    for dim, items in by_dim.items():
+        levels = sorted(i["score"] for i in items)
+        median = levels[len(levels) // 2]   # middle of 3; the higher of 2 (avoid under-marking)
+        merged.append(copy.deepcopy(next(i for i in items if i["score"] == median)))
+    base["dimension_scores"] = merged
+    return base
+
+
+def _score_with_samples(state, **kwargs) -> dict:
+    n = _judge_samples(state)
+    if n == 1:
+        return score_answer(**kwargs)
+    ctx = [contextvars.copy_context() for _ in range(n)]
+    with ThreadPoolExecutor(max_workers=n) as pool:
+        futures = [pool.submit(c.run, score_answer, **kwargs) for c in ctx]
+    results, errors = [], []
+    for f in futures:
+        try:
+            results.append(f.result())
+        except Exception as exc:  # one failed sample is fine; all failed is not
+            errors.append(exc)
+    if not results:
+        raise errors[0]
+    return _median_result(results)
+
+
 def evaluate_answer_node(state: EvaluatorState) -> dict:
-    result = score_answer(
+    result = _score_with_samples(
+        state,
         question=state["question"],
         answer=state["answer"],
         subject=state["subject"],

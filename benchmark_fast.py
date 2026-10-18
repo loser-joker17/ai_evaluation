@@ -32,6 +32,9 @@ import statistics
 import time
 from pathlib import Path
 
+# The benchmark repeats runs itself; one judge call per run keeps old results comparable.
+os.environ.setdefault("JUDGE_SAMPLES", "1")
+
 GOLDEN_GLOB = "data/benchmark/*_examiner_golden.json"
 CACHE_DIR = Path("data/benchmark/results/state_cache")
 # BENCH_RESULTS lets a judge experiment write to its own file instead of the main one.

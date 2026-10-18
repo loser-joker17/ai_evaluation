@@ -503,3 +503,25 @@ def test_backup_used_when_main_model_returns_nothing():
             return "ok"
 
     assert _StructuredWithBackup(Empty(), Good(), "b").invoke("x") == "ok"
+
+
+def test_long_answers_take_median_level_per_dimension():
+    from app.evaluator.graph import _median_result, _judge_samples
+    def run(levels):
+        dims = ["relevance", "content_substantiation", "analysis_depth", "coverage_balance",
+                "structure_presentation"]
+        return {"dimension_scores": [{"dimension": d, "score": l, "justification": f"{d}={l}"}
+                                     for d, l in zip(dims, levels)], "demands": []}
+    merged = _median_result([run([3, 3, 2, 3, 4]), run([4, 4, 3, 4, 4]), run([3, 5, 2, 2, 3])])
+    got = {i["dimension"]: i["score"] for i in merged["dimension_scores"]}
+    assert got == {"relevance": 3, "content_substantiation": 4, "analysis_depth": 2,
+                   "coverage_balance": 3, "structure_presentation": 4}
+    assert merged["dimension_scores"][1]["justification"] == "content_substantiation=4"
+    import os
+    old = os.environ.pop("JUDGE_SAMPLES", None)
+    try:
+        assert _judge_samples({"max_marks": 20, "word_limit": 250}) == 3
+        assert _judge_samples({"max_marks": 10, "word_limit": 150}) == 1
+    finally:
+        if old is not None:
+            os.environ["JUDGE_SAMPLES"] = old

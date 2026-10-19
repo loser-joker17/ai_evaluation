@@ -3,13 +3,20 @@
 Run locally (from the project root):
     uvicorn api.main:app --port 8000
 
+Run with ONE worker process (no --workers N, no gunicorn -w N). Jobs live in this
+process's memory: with two processes a job created in one is unknown to the other,
+and GET /jobs/{id} would answer 404. Concurrency comes from MAX_CONCURRENT_JOBS.
+
 Every endpoint except /health needs the header  X-Internal-Key: <INTERNAL_API_KEY>.
 This service is not meant to be reachable from the internet; only the backend calls it.
 
-    GET  /health            liveness + queue size (no key needed)
+    GET  /health            liveness + queue size + version (no key needed)
     POST /jobs              start an evaluation in the background -> 202
     GET  /jobs/{job_id}     poll a job's status and result
-    POST /evaluate          run one evaluation and wait for it (manual testing only)
+    GET  /stats             monitoring: counts, timings, backup use, recent run summaries
+    POST /evaluate          run one evaluation and wait for it (only if ENABLE_SYNC_EVALUATE)
+
+Settings: see app/config.py. Logs: see api/logging_setup.py (no answer text is logged).
 """
 import logging
 import secrets
@@ -22,11 +29,12 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
 from api.jobs import JobManager, QueueFullError
+from api.logging_setup import setup_logging
 from api.models import JobRequest, JobStatus
+from app import monitoring
 from app.config import Settings, get_settings
 from app.schemas import EvaluationInput
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("evaluator.api")
 
 
@@ -46,6 +54,7 @@ def create_app(
     warm_index: bool = True,
 ) -> FastAPI:
     settings = settings or get_settings()
+    setup_logging(settings.log_level, settings.log_json)
     if not settings.internal_api_key:
         raise RuntimeError("INTERNAL_API_KEY is missing. Set it in .env (any long random string).")
 
@@ -62,13 +71,19 @@ def create_app(
             ttl_s=settings.job_ttl_s,
             callback_url=settings.callback_url,
             internal_key=settings.internal_api_key,
+            recent_runs=settings.recent_runs,
         )
+        log.info("evaluator service started", extra={"data": {
+            "evaluator_version": monitoring.EVALUATOR_VERSION, "models": monitoring.model_info(),
+            "max_concurrent_jobs": settings.max_concurrent_jobs,
+            "sync_evaluate": settings.enable_sync_evaluate}})
         if warm_index:
             threading.Thread(target=_warm_corpus_index, daemon=True).start()
         yield
         app.state.jobs.shutdown()
 
-    app = FastAPI(title="UPSC Answer Evaluator", version="1.0", lifespan=lifespan)
+    app = FastAPI(title="UPSC Answer Evaluator", version=monitoring.EVALUATOR_VERSION,
+                  lifespan=lifespan)
 
     def require_key(x_internal_key: str = Header(default="")) -> None:
         if not secrets.compare_digest(x_internal_key.encode(), settings.internal_api_key.encode()):
@@ -79,7 +94,12 @@ def create_app(
 
     @app.get("/health")
     def health(manager: JobManager = Depends(jobs)) -> dict:
-        return {"status": "ok", **manager.stats()}
+        return {"status": "ok", "evaluator_version": monitoring.EVALUATOR_VERSION,
+                **manager.stats()}
+
+    @app.get("/stats", dependencies=[Depends(require_key)])
+    def stats(manager: JobManager = Depends(jobs)) -> dict:
+        return manager.monitor()
 
     @app.post("/jobs", status_code=status.HTTP_202_ACCEPTED, response_model=JobStatus,
               dependencies=[Depends(require_key)])
@@ -106,9 +126,23 @@ def create_app(
     @app.post("/evaluate", dependencies=[Depends(require_key)])
     async def evaluate_now(data: EvaluationInput) -> dict:
         # Blocks for the whole evaluation (minutes). Use /jobs from the backend.
+        if not settings.enable_sync_evaluate:
+            raise HTTPException(status.HTTP_404_NOT_FOUND,
+                                "POST /evaluate is disabled; use POST /jobs (ENABLE_SYNC_EVALUATE=true to allow).")
         return await run_in_threadpool(evaluate, data.model_dump())
 
     return app
 
 
-app = create_app()
+_app: FastAPI | None = None
+
+
+def __getattr__(name: str):
+    """`uvicorn api.main:app` asks for `app`; it is built on first access, so importing
+    create_app in tests needs no INTERNAL_API_KEY and builds no LLM clients."""
+    global _app
+    if name == "app":
+        if _app is None:
+            _app = create_app()
+        return _app
+    raise AttributeError(name)

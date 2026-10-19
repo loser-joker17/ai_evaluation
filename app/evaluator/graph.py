@@ -1,10 +1,12 @@
 import contextvars
 import os
+import time
 import copy
 from concurrent.futures import ThreadPoolExecutor
 
 from langgraph.graph import StateGraph, START, END
 
+from app import monitoring
 from app.evaluator.factcheck import fact_check
 from app.evaluator.scoring import _squash  
 from app.schemas import EvaluationInput, EvaluationOutput
@@ -13,6 +15,9 @@ from app.evaluator.question_analysis import analyze_question
 from app.evaluator.features import extract_features
 from app.evaluator.scoring import score_answer, finalize_scores, validate_scores, round_marks,verify_concerns
 from app.evaluator.feedback import (
+    drop_supported,
+    clean_dimension_notes,
+    _is_gs4,
     generate_feedback,
     check_feedback_consistency,
 )
@@ -150,6 +155,14 @@ def _score_with_samples(state, **kwargs) -> dict:
             errors.append(exc)
     if not results:
         raise errors[0]
+    # How much the judge's runs disagreed, per dimension (max level - min level).
+    spread = {}
+    for r in results:
+        for item in (r or {}).get("dimension_scores") or []:
+            if isinstance(item, dict) and isinstance(item.get("score"), int):
+                spread.setdefault(item.get("dimension"), []).append(item["score"])
+    monitoring.note("judge_samples", {"asked": n, "ok": len(results),
+                                      "spread": {d: max(v) - min(v) for d, v in spread.items()}})
     return _median_result(results)
 
 
@@ -176,6 +189,8 @@ def evaluate_answer_node(state: EvaluatorState) -> dict:
         return any(a in _squash(v["claim"]) or _squash(v["claim"]) in a for v in confirmed)
 
     concerns = [c for c in concerns if not _covered(c)]
+    # ... and concerns about claims the fact check found supported by an official source.
+    concerns = drop_supported(concerns, state.get("claim_verifications", []))
 
     scores, build_issues = finalize_scores(
         raw_items=(result or {}).get("dimension_scores") or [],
@@ -278,9 +293,25 @@ def generate_feedback_node(state: EvaluatorState) -> dict:
         word_limit_status=state["word_limit_status"],
         factual_concerns=state.get("factual_concerns", []),
         confirmed_errors=[v for v in state.get("claim_verifications", []) if v["label"] == "contradicted"],
+        word_limit=state.get("word_limit"),
+        subject=state.get("subject"),
+        claim_verifications=state.get("claim_verifications", []),
     )
 
+    notes_ctx = dict(
+        answer=state["answer"], question=state["question"], word_count=state["word_count"],
+        word_limit=state.get("word_limit"), max_marks=state["max_marks"],
+        total_score=state["total_score"],
+        supported_claims=[v.get("claim", "") for v in state.get("claim_verifications", [])
+                          if v.get("label") == "supported"],
+        confirmed_claims=[v.get("claim", "") for v in state.get("claim_verifications", [])
+                          if v.get("label") == "contradicted"],
+        gs4=_is_gs4(state.get("subject"), state["question"]),
+        extra_numbers=" ".join(str(v.get("quote") or "") for v in state.get("claim_verifications", [])
+                               if v.get("label") == "contradicted"),
+    )
     return {
+        "dimension_scores": clean_dimension_notes(state["dimension_scores"], **notes_ctx),
         "strengths": result["strengths"],
         "weaknesses": result["weaknesses"],
         "improvement_suggestions": result["improvement_suggestions"],
@@ -427,8 +458,27 @@ def evaluate_submission(data: dict | EvaluationInput) -> dict:
     if isinstance(data, EvaluationInput):
         data = data.model_dump()
 
-    result = chatbot.invoke(data)
-    return result["final_result"]
+    run = monitoring.start_run()
+    final, last = None, time.time()
+    try:
+        # stream (not invoke) so each step's duration can be recorded
+        for chunk in chatbot.stream(data, stream_mode="updates"):
+            now = time.time()
+            for node, update in chunk.items():
+                monitoring.step_done(node, now - last)
+                if update and "final_result" in update:
+                    final = update["final_result"]
+            last = now
+    except Exception as exc:
+        monitoring.log_summary(monitoring.summary(run, None, data, "failed",
+                                                  f"{type(exc).__name__}: {exc}"[:300]))
+        raise
+    status = "success" if (final or {}).get("status") == "success" else "rejected"
+    info = monitoring.summary(run, final, data, status)
+    monitoring.log_summary(info)
+    final = dict(final or {})
+    final["run_info"] = info
+    return final
 
 
 def evaluate_submission_stream(data: dict | EvaluationInput):

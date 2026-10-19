@@ -404,7 +404,12 @@ def test_meta_parts_are_not_question_parts():
     e = "Under what conditions can Emergency be proclaimed? What are the consequences?"
     assert not is_meta_part("Consequences while in force", e)
     assert is_meta_part("Challenges faced by associations", "In what ways do associations contribute?")
-    assert not is_meta_part("Provide suitable examples", "Explain with suitable examples.")
+    # "with examples" runs through the whole answer: it is checked by the illustrate
+    # directive's demand (concrete examples -> content_substantiation), not as a section.
+    assert is_meta_part("Provide suitable examples", "Explain with suitable examples.")
+    from app.evaluator.demands import build_demands as _bd
+    assert any(d["source"] == "directive" and "examples" in d["text"]
+               for d in _bd("Explain with suitable examples.", {"question_parts": ["Provide suitable examples"]}))
     ids = [d["text"] for d in build_demands(k, {"question_parts": [
         "Identify changes in family structures", "Make a reasoned assessment of the extent"]})]
     assert "Make a reasoned assessment of the extent" not in ids

@@ -220,13 +220,59 @@ def is_grounded_part(part: str, question: str) -> bool:
     return hits / len(words) >= 0.34
 
 
+# A requirement that runs through the whole answer rather than a section of its own:
+# "Discuss X with the help of relevant constitutional provisions and case laws" was split
+# into a part "Support the discussion with relevant constitutional provisions"; an answer
+# that cited nine Articles in its points then got "0% of the body" and a "missing" note.
+# How well the answer is substantiated is judged by content_substantiation instead.
+_EVIDENCE_NOUNS = (r"examples?|illustrations?|provisions?|articles?|case[- ]stud(?:y|ies)|"
+                   r"case[- ]laws?|judg(?:e)?ments?|data|evidence|facts|references?|statistics")
+_CROSS_CUTTING_RX = re.compile(
+    rf"^\s*(?:support|supported|substantiate|back(?:ed)?(?: up)?|illustrate|use|using|cite|citing|"
+    rf"give|giving|provide|providing|quote|include|including|with|draw(?:ing)? on|refer(?:ring)? to)\b"
+    rf"[^.;]{{0,80}}?\b(?:{_EVIDENCE_NOUNS})\b(?!\s+(?:of|from|on|where|that|which|showing)\b)",
+    re.I,
+)
+
+
+def is_cross_cutting_part(part: str) -> bool:
+    """True for a 'part' that is a way of answering (with examples, citing provisions)."""
+    return bool(_CROSS_CUTTING_RX.search(str(part or "")))
+
+
+# The phenomenon a "to what extent / how far" question takes as given is its premise,
+# not a demand: "To what extent can the rise of 'Kidfluencers' be seen as a reflection of
+# changing family structures?" does not ask the candidate to describe the rise itself.
+_TREND_WORDS = r"rise|rising|growth|growing|emergence|increase|increasing|spread|popularity|proliferation|surge"
+_PREMISE_Q_RX = re.compile(
+    rf"\b(?:to what extent|how far|to what degree|do you agree|can|is|does)\b.*?\b(?:{_TREND_WORDS})\b"
+    rf"(?P<subject>.*?)\b(?P<pred>be seen as|seen as|reflect\w*|indicat\w*|result\w*|due to|"
+    rf"driven by|sign of|symptom of|attribut\w*|explain\w*)\b(?P<rest>.*)",
+    re.I | re.S,
+)
+
+
+def is_premise_part(part: str, question: str) -> bool:
+    p = str(part or "")
+    m = _PREMISE_Q_RX.search(str(question or ""))
+    if not m or not re.search(rf"\b(?:{_TREND_WORDS})\b", p, re.I):
+        return False
+    # One shared word ("society" in "rise of X in Indian society") is context, not the ask.
+    rest = re.sub(r"\bin (?:the )?(?:indian |india'?s? |contemporary |modern |present[- ]day )?"
+                  r"(?:society|context|india|times)\b", " ", m.group("rest"), flags=re.I)
+    pred_stems = {w[:5] for w in _content_words(rest)}
+    return sum(w[:5] in pred_stems for w in _content_words(p)) < 2
+
+
 def is_meta_part(part: str, question: str = "") -> bool:
     """True if a 'question part' is really the directive restated, adds a side or
     element the question text never mentions, or is mostly words the question never uses."""
     p, q = str(part or "").lower(), str(question or "").lower()
     if not p:
         return False
-    if _META_PART_RX.search(p):
+    if _META_PART_RX.search(p) or is_cross_cutting_part(p):
+        return True
+    if q and is_premise_part(part, question):
         return True
     if re.match(r"\s*analy[sz]e\b", p) and q and not re.search(r"\banaly[sz]", q):
         return True

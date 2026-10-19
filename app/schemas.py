@@ -24,17 +24,20 @@ class EvaluationInput(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    question: str = Field(min_length=5, description="UPSC GS Mains question")
-    answer: str = Field(min_length=1, description="Student's written answer")
+    # Upper limits protect the service (and the token bill) from pasted books. A GS4 case
+    # study is ~1,500 characters; a 250-word answer ~1,700; both limits leave lots of room.
+    question: str = Field(min_length=5, max_length=5000, description="UPSC GS Mains question")
+    answer: str = Field(min_length=1, max_length=15000, description="Student's written answer")
     max_marks: Literal[10, 15, 20] = Field(
         description="Maximum marks available: 10 or 15"
     )
     word_limit: int | None = Field(
         default=None,
         gt=0,
+        le=1000,
         description="Expected word limit, if specified by the question",
     )
-    subject: str = Field(default="GS", description="Subject or GS paper")
+    subject: str = Field(default="GS", max_length=100, description="Subject or GS paper")
 
 
 class ExpectedCoverage(BaseModel):

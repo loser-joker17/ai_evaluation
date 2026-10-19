@@ -29,6 +29,7 @@
 # llm = get_llm()
 # # print(llm.invoke("Say OK").content)
 
+import logging
 import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
@@ -95,8 +96,17 @@ class _StructuredWithBackup:
             reason = "empty reply"
         except Exception as exc:
             reason = type(exc).__name__
-        print(f"[backup] main model failed ({reason}); using {self.backup_name}")
-        return self.backup.invoke(*args, **kwargs)
+        # Without logging configured (benchmark scripts) this still prints to the terminal.
+        logging.getLogger("evaluator.llm").warning(
+            "[backup] main model failed (%s); using %s", reason, self.backup_name)
+        from app import monitoring
+        monitoring.add_backup(self.backup_name, reason)
+        result = self.backup.invoke(*args, **kwargs)
+        if result is None:
+            # Fail clearly here instead of a TypeError further down the pipeline.
+            raise RuntimeError(f"Main model failed ({reason}) and the backup "
+                               f"{self.backup_name} returned no usable output.")
+        return result
 
 
 class _JudgeWithBackup:

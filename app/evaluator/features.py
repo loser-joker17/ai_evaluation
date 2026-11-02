@@ -9,6 +9,43 @@ CONCLUSION_WINDOW = 2   # conclusion must be within the last N sentences
 # "Measures:", "Way forward:", "Challenges:" ... a section label, not framing.
 LABEL_RE = re.compile(r"^\s*[A-Za-z][A-Za-z /&-]{0,30}:\s")
 
+
+# Optional markdown in front of / around a heading: "## ", "**", "- ", "> ".
+_MD = r"[\s#*_>\-•]*"
+
+# "Conclusion:", "**Conclusion**:", "In conclusion -", "Summary:" ... these labels
+# announce the summing-up itself, so the sentence they head IS the conclusion.
+CONCLUSION_LABEL_RE = re.compile(
+    rf"^{_MD}(conclusion|concluding remarks?|in conclusion|to conclude|summary|"
+    rf"to sum up|final (?:thoughts?|remarks?)){_MD}\s*[:\-–—]{_MD}\s*",
+    re.IGNORECASE,
+)
+# "Introduction:", "**Intro**:" ... the same for the opening.
+INTRO_LABEL_RE = re.compile(
+    rf"^{_MD}(introduction|intro|overview){_MD}\s*[:\-–—]{_MD}\s*",
+    re.IGNORECASE,
+)
+# A heading line: "Challenges:", "Role of FC:", "## Challenges", "**Challenges**".
+_HEADING_LINE_RE = re.compile(
+    rf"^{_MD}(?P<h>[A-Za-z][A-Za-z0-9 ,/&()'\-]{{1,60}}?){_MD}\s*:\s*(?P<rest>.*)$"
+    rf"|^\s*#+\s*(?P<h2>.+?)\s*$"
+    rf"|^\s*\*\*(?P<h3>[^*]{{2,60}})\*\*\s*$"
+)
+
+
+def _strip_label(sentence: str, label_re: re.Pattern) -> str:
+    """The sentence without its 'Conclusion:' / 'Introduction:' label ("" if none)."""
+    m = label_re.match(sentence)
+    return sentence[m.end():].strip() if m else ""
+
+
+def _is_bare_section_label(sentence: str) -> bool:
+    """True for "Measures: ..." style lines; False when the label is a
+    'Conclusion:' / 'Introduction:' label, which heads framing text."""
+    if CONCLUSION_LABEL_RE.match(sentence) or INTRO_LABEL_RE.match(sentence):
+        return False
+    return bool(LABEL_RE.match(sentence))
+
 CONCLUDING_MARKERS = re.compile(
     r"\b(thus|therefore|hence|in conclusion|to conclude|in sum|to sum up|"
     r"overall|ultimately|in short|all in all)\b",
@@ -45,6 +82,26 @@ def _matching_indices(quote: str, sentences: list[str]) -> list[int]:
     return hits
 
 
+
+def _is_heading_only(sentence: str) -> bool:
+    """A bare "Conclusion:" / "Introduction:" line with nothing after the label."""
+    for label_re in (CONCLUSION_LABEL_RE, INTRO_LABEL_RE):
+        if label_re.match(sentence) and len(_strip_label(sentence, label_re).split()) < 3:
+            return True
+    return False
+
+
+def conclusion_section_start(sentences: list[str]) -> int | None:
+    """Index of the sentence where a 'Conclusion:' section begins, if the student
+    headed one in the second half of the answer. A bare heading line starts the
+    section at the next sentence."""
+    for i in range(len(sentences) - 1, -1, -1):
+        if CONCLUSION_LABEL_RE.match(sentences[i]):
+            if i < len(sentences) / 2:
+                return None
+            return i + 1 if _is_heading_only(sentences[i]) and i + 1 < len(sentences) else i
+    return None
+
 # ------------------------------------------------------- verification
 
 def verify_introduction(quote, sentences):
@@ -52,14 +109,20 @@ def verify_introduction(quote, sentences):
     if not quote:
         return False, [], None
 
-    hits = [i for i in _matching_indices(quote, sentences) if i < INTRO_WINDOW]
+    # A bare "Introduction:" heading line does not use up the window.
+    window = INTRO_WINDOW
+    if sentences and INTRO_LABEL_RE.match(sentences[0]) and _is_heading_only(sentences[0]):
+        window += 1
+
+    hits = [i for i in _matching_indices(quote, sentences)
+            if i < window and not _is_heading_only(sentences[i])]
     if not hits:
         return False, [], (
             "Introduction rejected: the quoted sentence is not among the "
             f"first {INTRO_WINDOW} sentences of the answer."
         )
 
-    if all(LABEL_RE.match(sentences[i]) for i in hits):
+    if all(_is_bare_section_label(sentences[i]) for i in hits):
         return False, [], (
             "Introduction rejected: the opening line is a section label, "
             "not a framing sentence."
@@ -74,24 +137,31 @@ def verify_conclusion(quote, sentences):
         return False, [], None
 
     last = len(sentences) - 1
-    hits = [
-        i for i in _matching_indices(quote, sentences)
-        if i >= len(sentences) - CONCLUSION_WINDOW
-    ]
+    section = conclusion_section_start(sentences)
+
+    def eligible(i: int) -> bool:
+        if _is_heading_only(sentences[i]):
+            return False
+        return i >= len(sentences) - CONCLUSION_WINDOW or (section is not None and i >= section)
+
+    hits = [i for i in _matching_indices(quote, sentences) if eligible(i)]
     if not hits:
         return False, [], (
             "Conclusion rejected: the quoted sentence is not among the "
             f"last {CONCLUSION_WINDOW} sentences of the answer."
         )
 
-    body = [i for i in hits if not LABEL_RE.match(sentences[i])]
+    body = [i for i in hits if not _is_bare_section_label(sentences[i])]
     if not body:
         return False, [], (
             "Conclusion rejected: the closing line is a section label "
             "(for example a list of measures), not a summing-up sentence."
         )
 
-    ok = [i for i in body if i == last or CONCLUDING_MARKERS.search(sentences[i])]
+    # Inside a section the student headed "Conclusion:", every sentence counts.
+    ok = [i for i in body
+          if i == last or CONCLUDING_MARKERS.search(sentences[i])
+          or (section is not None and i >= section)]
     if not ok:
         return False, [], (
             "Conclusion rejected: the quoted sentence is not the final "
@@ -118,6 +188,69 @@ def split_blocks(answer: str) -> list[str]:
 def _word_count(text: str) -> int:
     return len(text.split())
 
+
+
+_STOP = {
+    "about", "also", "answer", "analyse", "analyze", "assess", "been", "between", "both",
+    "comment", "critically", "describe", "discuss", "does", "each", "elaborate", "evaluate",
+    "examine", "explain", "from", "given", "have", "highlight", "india", "indian", "into",
+    "their", "them", "these", "they", "this", "those", "what", "which", "with", "would",
+    "various", "while", "your", "under", "over", "such", "role", "part",
+}
+
+
+def _stems(text: str) -> set[str]:
+    words = re.findall(r"[a-z]+", text.lower())
+    return {w[:5] for w in words if len(w) >= 4 and w not in _STOP}
+
+
+def heading_of(block: str) -> str | None:
+    """The heading text if the block starts with (or is) a section heading."""
+        # "- Vertical devolution: ..." is a bullet point inside a section, not a heading.
+    if re.match(r"^\s*(?:[-•–]|\*(?!\*)|\d+[.)])\s", block):
+        return None
+    m = _HEADING_LINE_RE.match(block.strip())
+    if not m:
+        return None
+    h = (m.group("h") or m.group("h2") or m.group("h3") or "").strip(" *#_")
+    if not h or len(h.split()) > 6:
+        return None
+    return h
+
+
+def align_labels_with_headings(blocks: list[str], labels: list[str],
+                               parts: list[str]) -> tuple[list[str], int]:
+    """Use the student's own headings to fix part labels.
+
+    When a heading clearly names one question part (it shares a word that only
+    that part has), every block in its section that the model labelled with a
+    part or "other" gets that part. Intro, conclusion and way-forward labels
+    are kept. Returns (labels, number changed)."""
+    if len(parts) < 2 or len(labels) != len(blocks):
+        return labels, 0
+
+    part_stems = [_stems(p) for p in parts]
+    distinct = []
+    for k, s in enumerate(part_stems):
+        others = set().union(*(o for j, o in enumerate(part_stems) if j != k))
+        distinct.append(s - others)
+
+    labels = [str(l).strip() for l in labels]
+    heads = [(i, heading_of(b)) for i, b in enumerate(blocks)]
+    heads = [(i, h) for i, h in heads if h]
+    changed = 0
+    for n, (start, h) in enumerate(heads):
+        hs = _stems(h)
+        matches = [k for k, d in enumerate(distinct) if hs & d]
+        if len(matches) != 1:
+            continue
+        target = f"P{matches[0] + 1}"
+        end = heads[n + 1][0] if n + 1 < len(heads) else len(blocks)
+        for b in range(start, end):
+            if (labels[b].startswith("P") or labels[b] == "other") and labels[b] != target:
+                labels[b] = target
+                changed += 1
+    return labels, changed
 
 def compute_allocation(blocks: list[str], labels: list[str], parts: list[str]) -> dict:
     """Share of the answer body spent on each question part, the share spent on
@@ -191,12 +324,16 @@ Extract the following from the ANSWER only:
 - introduction_sentence: copy WORD FOR WORD the first sentence of the answer
   if it frames the topic (a definition, context or thesis). Otherwise null.
   A line that starts a section (for example "Challenges:") is not an
-  introduction. Only the first two sentences are eligible.
+  introduction. Only the first two sentences are eligible. A sentence
+  under an "Introduction:" heading (or starting with it) IS an
+  introduction when it frames the topic.
 - conclusion_sentence: copy WORD FOR WORD the last sentence of the answer
   if it sums up the whole answer or gives a closing judgement. Otherwise
   null. A list of measures, recommendations or a "way forward" is NOT a
   conclusion unless a separate closing sentence follows it. If the answer
-  simply ends with its last point, return null.
+   simply ends with its last point, return null. A sentence under a
+  "Conclusion:" heading (or starting with it) that sums up IS a conclusion;
+  copy it with or without the "Conclusion:" label.
 - constitutional_or_legal_refs: Articles, Preamble, DPSP, Acts, judgments
   that are literally named in the answer.
 - schemes_policies_committees: named schemes, policies, missions, committees.
@@ -295,7 +432,12 @@ Return only the structured RawAnswerFeatures response.
     features["relevant_points"] = kept
     features["relevant_point_count"] = len(kept)
 
-    alloc = compute_allocation(blocks, raw.get("block_labels", []), parts)
+    block_labels, relabelled = align_labels_with_headings(
+        blocks, raw.get("block_labels") or [], parts)
+    if relabelled:
+        notes.append(f"Allocation: {relabelled} block(s) relabelled to match the answer's "
+                     f"own section headings.")
+    alloc = compute_allocation(blocks, block_labels, parts)
     alloc_note = alloc.pop("note")
     if alloc_note:
         notes.append(alloc_note)

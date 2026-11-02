@@ -42,7 +42,12 @@ def validate_input_node(state: EvaluatorState) -> dict:
     except Exception as exc:
         return {
             "input_valid": False,
-            "input_errors": [str(exc)],
+                        # str(exc) of a ValidationError quotes the input, i.e. the answer text.
+            "input_errors": (
+                [f"{'.'.join(map(str, e['loc']))}: {e['msg']}"
+                 for e in exc.errors(include_input=False)]
+                if hasattr(exc, "errors") else [type(exc).__name__]
+            ),
         }
 
 
@@ -471,7 +476,7 @@ def evaluate_submission(data: dict | EvaluationInput) -> dict:
             last = now
     except Exception as exc:
         monitoring.log_summary(monitoring.summary(run, None, data, "failed",
-                                                  f"{type(exc).__name__}: {exc}"[:300]))
+                                                  monitoring.safe_error(exc)[:300]))
         raise
     status = "success" if (final or {}).get("status") == "success" else "rejected"
     info = monitoring.summary(run, final, data, status)

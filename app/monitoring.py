@@ -110,3 +110,14 @@ def log_summary(info: dict) -> None:
     level = logging.WARNING if info.get("status") == "failed" or info.get("backups_used") else logging.INFO
     _log.log(level, "evaluation %s in %ss (%s)", info.get("status"), info.get("seconds"),
              info.get("job_id") or "no job id", extra={"data": info})
+
+
+
+def safe_error(exc: BaseException) -> str:
+    """Error type and where it happened, never the message (it can hold answer text).
+    For example: "TypeError at scoring.py:212 score_answer <- graph.py:301 score_node"."""
+    import traceback
+    frames = traceback.extract_tb(exc.__traceback__)[-4:]
+    where = " <- ".join(f"{f.filename.replace(chr(92), '/').rsplit('/', 1)[-1]}:{f.lineno} {f.name}"
+                        for f in reversed(frames))
+    return f"{type(exc).__name__} at {where}" if where else type(exc).__name__

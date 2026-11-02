@@ -158,9 +158,9 @@ class JobManager:
                          job, payload)
             log.info("job %s done in %.0fs", job_id, job.finished_at - job.started_at)
         except Exception as exc:  # the job must always end in a final state
-            log.exception("job %s failed", job_id)
-            job = self._update(job_id, status="failed",
-                               error=f"{type(exc).__name__}: {exc}"[:500],
+            error = monitoring.safe_error(exc)
+            log.error("job %s failed: %s", job_id, error)
+            job = self._update(job_id, status="failed", error=error[:500],
                                finished_at=time.time())
             self._record("failed", {}, job, payload)
         finally:

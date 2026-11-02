@@ -26,10 +26,15 @@ class JsonFormatter(logging.Formatter):
         if isinstance(data, dict):
             out.update(data)
         if record.exc_info:
-            out["exc"] = self.formatException(record.exc_info)[-2000:]
+            # Type and location only: an exception message can hold answer text.
+            out["exc"] = monitoring.safe_error(record.exc_info[1])
         return json.dumps(out, ensure_ascii=False, default=str)
 
-
+class SafeTextFormatter(logging.Formatter):
+    """Plain-text lines; tracebacks shrink to type and location, never the message."""
+    def formatException(self, ei) -> str:
+        return monitoring.safe_error(ei[1])
+    
 class _JobIdFilter(logging.Filter):
     def filter(self, record):
         record.job_id = monitoring.job_id_var.get() or "-"
